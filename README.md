@@ -4,7 +4,7 @@ Just another simple monitor for your AI usage in WinUI3 style.
 
 一个简单的 WinUI3 风格的 AI 用量显示小工具，支持Claude、ChatGPT、Deepseek（实验性）和KIMI（实验性）。
 
-## Screenshots
+## UI Screenshots(支持简体中文和英文）
 
 **Panel layouts** — joined or separate, horizontal or vertical, and docked to a screen edge. The percentage text on the rings can be switched on or off in Settings.
 
