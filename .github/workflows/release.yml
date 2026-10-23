@@ -1,7 +1,8 @@
 name: Release
 
 # Builds x64, x86 and ARM64 and publishes, per architecture:
-#   - a single-file portable exe
+#   - a single-file portable exe (self-contained)
+#   - a small framework-dependent zip (needs the .NET 8 runtime and the Windows App Runtime)
 #   - an MSI installer (WiX)
 #   - an MSIX package, plus one .msixbundle that contains all three
 # Push a tag such as v0.3.0 to create a GitHub release with every file attached.
@@ -73,10 +74,17 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
           -p:DebugType=None -p:Version=$env:VERSION -o publish/single
 
-      - name: Collect portable exe
+      - name: Publish (framework-dependent)
+        run: >
+          dotnet publish UsageMon.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.rid }}
+          --self-contained false -p:WindowsAppSDKSelfContained=false
+          -p:DebugType=None -p:Version=$env:VERSION -o publish/framework-dependent
+
+      - name: Collect portable exe and framework-dependent zip
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
           Copy-Item publish/single/UsageMon.exe "dist/UsageMon-$env:VERSION-${{ matrix.arch }}-portable.exe"
+          Compress-Archive -Path "publish/framework-dependent/*" -DestinationPath "dist/UsageMon-$env:VERSION-${{ matrix.arch }}-framework-dependent.zip"
 
       - name: Build MSI
         run: |
@@ -161,6 +169,7 @@ jobs:
             dist/*.exe
             dist/*.msi
             dist/*.msixbundle
+            dist/*.zip
             dist/*.cer
           if-no-files-found: error
 
