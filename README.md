@@ -1,5 +1,7 @@
 # UsageMon · 用量悬浮窗
 
+<p align="center"><img src="docs/hero.png" alt="UsageMon panel and usage tooltip" width="560"></p>
+
 [![Downloads](https://img.shields.io/github/downloads/nathanatgit/UsageMon/total?label=downloads&color=0067c0)](https://github.com/nathanatgit/UsageMon/releases)
 [![Latest release](https://img.shields.io/github/v/release/nathanatgit/UsageMon?color=0067c0)](https://github.com/nathanatgit/UsageMon/releases/latest)
 
