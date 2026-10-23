@@ -1,5 +1,8 @@
 # UsageMon
 
+[![Downloads](https://img.shields.io/github/downloads/nathanatgit/UsageMon/total?label=downloads&color=0067c0)](https://github.com/nathanatgit/UsageMon/releases)
+[![Latest release](https://img.shields.io/github/v/release/nathanatgit/UsageMon?color=0067c0)](https://github.com/nathanatgit/UsageMon/releases/latest)
+
 Just another simple monitor for your AI usage in WinUI3 style.
 
 一个简单的 WinUI3 风格的 AI 用量显示小工具，支持Claude、ChatGPT、Deepseek（实验性）和KIMI（实验性）。
