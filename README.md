@@ -1,15 +1,15 @@
-# UsageMon
+# UsageMon · 用量悬浮窗
 
 [![Downloads](https://img.shields.io/github/downloads/nathanatgit/UsageMon/total?label=downloads&color=0067c0)](https://github.com/nathanatgit/UsageMon/releases)
 [![Latest release](https://img.shields.io/github/v/release/nathanatgit/UsageMon?color=0067c0)](https://github.com/nathanatgit/UsageMon/releases/latest)
 
-Just another simple floating/taskbar monitor for your AI usage in WinUI3 style, with Mica and Arcylic material.
+Just another simple floating/taskbar monitor, that's all of it.
+
+For your AI usage in WinUI3 style, with Mica and Arcylic material.
 
 一个简单的 WinUI3 风格的 AI 用量显示悬浮窗，可选云母、亚克力材质，支持Claude、ChatGPT、Deepseek（实验性）和KIMI（实验性）。
 
-Simple and native, no expensive settings and fancy UIs. Minimal and clean.
-
-简洁的用量悬浮窗，That's all of it。
+Simple and native, no expensive settings and fancy UIs. Minimal and clean, click and leave it there.
 
 ## UI Screenshots(支持简体中文和英文）
 
