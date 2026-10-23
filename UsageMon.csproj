@@ -11,6 +11,11 @@
     <UseWinUI>true</UseWinUI>
     <!-- Without this, dotnet publish leaves out UsageMon.pri (the compiled XAML) and the app fails to start. -->
     <EnableMsixTooling>true</EnableMsixTooling>
+    <!-- resources.pri is found whatever the exe is called (UsageMon.pri only works for UsageMon.exe),
+         so the portable release can be renamed per version and architecture. -->
+    <ProjectPriFileName>resources.pri</ProjectPriFileName>
+    <!-- Keep build and release folders out of the project items, or they get packed into the single-file exe. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);publish/**;dist/**;docs/**;installer/**;.github/**;tests/**</DefaultItemExcludes>
     <!-- TaskbarLayout uses classic COM interop for UI Automation; keep it available in trimmed builds. -->
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <WindowsPackageType>None</WindowsPackageType>

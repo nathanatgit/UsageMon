@@ -1,7 +1,7 @@
 name: Release
 
 # Builds x64, x86 and ARM64 and publishes, per architecture:
-#   - a single-file portable exe (self-contained, trimmed)
+#   - a portable zip (self-contained, trimmed; unzip and run UsageMon.exe)
 #   - a small framework-dependent zip (needs the .NET 8 runtime and the Windows App Runtime)
 #   - an MSI installer (WiX, self-contained, trimmed)
 #   - an MSIX package, plus one .msixbundle that contains all three
@@ -65,32 +65,25 @@ jobs:
       - name: Publish (folder)
         run: >
           dotnet publish UsageMon.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.rid }}
-          --self-contained -p:PublishTrimmed=true -p:DebugType=None -p:Version=$env:VERSION -o publish/folder
-
-      - name: Publish (portable single file)
-        run: >
-          dotnet publish UsageMon.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.rid }}
-          --self-contained -p:PublishTrimmed=true -p:PublishSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
-          -p:DebugType=None -p:Version=$env:VERSION -o publish/single
+          --self-contained -p:PublishTrimmed=true -p:DebugType=None -p:Version=$env:VERSION -o $env:RUNNER_TEMP/publish/folder
 
       - name: Publish (framework-dependent)
         run: >
           dotnet publish UsageMon.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.rid }}
           --self-contained false -p:WindowsAppSDKSelfContained=false
-          -p:DebugType=None -p:Version=$env:VERSION -o publish/framework-dependent
+          -p:DebugType=None -p:Version=$env:VERSION -o $env:RUNNER_TEMP/publish/framework-dependent
 
-      - name: Collect portable exe and framework-dependent zip
+      - name: Zip the portable and framework-dependent builds
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item publish/single/UsageMon.exe "dist/UsageMon-$env:VERSION-${{ matrix.arch }}-portable.exe"
-          Compress-Archive -Path "publish/framework-dependent/*" -DestinationPath "dist/UsageMon-$env:VERSION-${{ matrix.arch }}-framework-dependent.zip"
+          Compress-Archive -Path "$env:RUNNER_TEMP/publish/folder/*" -DestinationPath "dist/UsageMon-$env:VERSION-${{ matrix.arch }}-portable.zip"
+          Compress-Archive -Path "$env:RUNNER_TEMP/publish/framework-dependent/*" -DestinationPath "dist/UsageMon-$env:VERSION-${{ matrix.arch }}-framework-dependent.zip"
 
       - name: Build MSI
         run: |
           dotnet tool install --global wix --version 5.0.2
           & "$env:USERPROFILE/.dotnet/tools/wix.exe" build -arch ${{ matrix.arch }} -d Version=$env:MSIX_VERSION `
-            -bindpath "Publish=$PWD/publish/folder" `
+            -bindpath "Publish=$env:RUNNER_TEMP/publish/folder" `
             -o "dist/UsageMon-$env:VERSION-${{ matrix.arch }}.msi" installer/UsageMon.wxs
 
       - name: Build MSIX
@@ -99,8 +92,8 @@ jobs:
           $name = '${{ vars.STORE_IDENTITY_NAME }}';             if (-not $name)  { $name = 'nathanatgit.UsageMon' }
           $publisher = '${{ vars.STORE_PUBLISHER }}';             if (-not $publisher) { $publisher = 'CN=nathanatgit' }
           $display = '${{ vars.STORE_PUBLISHER_DISPLAY_NAME }}';  if (-not $display) { $display = 'nathanatgit' }
-          $stage = 'publish/msix'
-          Copy-Item publish/folder $stage -Recurse
+          $stage = "$env:RUNNER_TEMP/publish/msix"
+          Copy-Item "$env:RUNNER_TEMP/publish/folder" $stage -Recurse
           New-Item -ItemType Directory -Force "$stage/Assets" | Out-Null
           Copy-Item installer/msix-assets/*.png "$stage/Assets/"
           $manifest = Get-Content installer/AppxManifest.template.xml -Raw
@@ -166,7 +159,6 @@ jobs:
         with:
           name: release-files
           path: |
-            dist/*.exe
             dist/*.msi
             dist/*.msixbundle
             dist/*.zip

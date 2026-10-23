@@ -19,7 +19,7 @@ Get the latest build from [Releases](https://github.com/nathanatgit/UsageMon/rel
 
 | Build | Files | Needs |
 |---|---|---|
-| Self-contained | `…-portable.exe` (single file, no install), `….msi`, `….msixbundle` | Nothing else |
+| Self-contained | `…-portable.zip` (unzip and run `UsageMon.exe`, no install), `….msi`, `….msixbundle` | Nothing else |
 | Framework-dependent (smallest) | `…-framework-dependent.zip` | [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) and [Windows App Runtime 2.0](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads) |
 
 The `.msixbundle` is self-signed: import `UsageMon-signing-certificate.cer` into *Trusted People* (or *Trusted Root Certification Authorities*) before installing it.
