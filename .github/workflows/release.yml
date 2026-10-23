@@ -8,7 +8,6 @@ name: Release
 on:
   push:
     tags: ['v*']
-    branches: [release-workflow]   # test runs; builds only, no release
   workflow_dispatch:
     inputs:
       version:
