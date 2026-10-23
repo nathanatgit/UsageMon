@@ -27,6 +27,7 @@ public sealed partial class SettingsWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(TitleBar);
         Root.ActualThemeChanged += (_, _) => UpdateCaptionColors();
+        Root.SizeChanged += (_, e) => ApplyLayout(e.NewSize.Width);
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "UsageMon.ico"));
         SystemBackdrop = new MicaBackdrop();
         double scale = NativeMethods.GetDpiForWindow(WinRT.Interop.WindowNative.GetWindowHandle(this)) / 96d;
@@ -49,6 +50,19 @@ public sealed partial class SettingsWindow : Window
         Title = Loc.T("UsageMon Settings");
         Loc.Apply(Root);
         ReloadPreferences();
+    }
+    // Two columns of tiles when the window is wide; a single column when it is narrowed.
+    private bool _singleColumn;
+    private void ApplyLayout(double width)
+    {
+        bool single = width < 720;
+        if (single == _singleColumn && Columns.RowDefinitions.Count > 0 && Grid.GetRow(RightColumn) == (single ? 1 : 0)) return;
+        _singleColumn = single;
+        Columns.ColumnDefinitions[1].Width = single ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        Columns.ColumnSpacing = single ? 0 : 16;
+        Columns.RowSpacing = single ? 16 : 0;
+        Grid.SetColumn(RightColumn, single ? 0 : 1);
+        Grid.SetRow(RightColumn, single ? 1 : 0);
     }
     public void ApplyTheme()
     {

@@ -22,7 +22,7 @@ public sealed partial class QuotaBadge : UserControl
     private bool _live;
     private UsageWindow? _shortWindow;
     private UsageWindow? _weeklyWindow;
-    private readonly StackPanel _tooltipPanel = new() { Spacing = 10, Width = 340 };
+    private readonly StackPanel _tooltipPanel = new() { Spacing = 10, MinWidth = 340 };
     private string _summary = "";
 
     public QuotaBadge()
@@ -31,7 +31,7 @@ public sealed partial class QuotaBadge : UserControl
         PointerEntered += (_, _) => { _hovered = true; UpdateLabels(); };
         PointerExited += (_, _) => { _hovered = false; UpdateLabels(); };
         PointerCanceled += (_, _) => { _hovered = false; UpdateLabels(); };
-        _tip = new ToolTip { Content = _tooltipPanel, Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Top };
+        _tip = new ToolTip { MaxWidth = 560, Content = _tooltipPanel, Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Top };
         ToolTipService.SetToolTip(this, _tip);
     }
 
@@ -90,19 +90,19 @@ public sealed partial class QuotaBadge : UserControl
     private static Grid WindowRow(string title, string ring, UsageWindow? window, bool live, List<string> lines)
     {
         var grid = new Grid { ColumnSpacing = 12 };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(112) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, MinWidth = 112 });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 90 });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, MinWidth = 56 });
         var labels = new StackPanel { Spacing = 1 };
         labels.Children.Add(new TextBlock { Text = title });
         string reset = window?.ResetsAt is { } at
-            ? (Loc.Chinese ? "重置于 " : "Resets ") + (at.ToLocalTime().Date == DateTime.Today ? (Loc.Chinese ? "" : "at ") + at.ToLocalTime().ToString("t") : at.ToLocalTime().ToString("ddd t"))
+            ? (Loc.Chinese ? "重置于 " : "Resets ") + (at.ToLocalTime().Date == DateTime.Today ? (Loc.Chinese ? "" : "at ") + at.ToLocalTime().ToString("t") : at.ToLocalTime().ToString("ddd") + " " + at.ToLocalTime().ToString("t"))
             : ring;
         labels.Children.Add(Caption(window is null ? Loc.T("Unavailable") : reset));
         grid.Children.Add(labels);
         var bar = new ProgressBar
         {
-            Minimum = 0, Maximum = 100, Value = window is null ? 0 : Math.Clamp(window.UsedPercent, 0, 100),
+            MinWidth = 90, Minimum = 0, Maximum = 100, Value = window is null ? 0 : Math.Clamp(window.UsedPercent, 0, 100),
             VerticalAlignment = VerticalAlignment.Center, Opacity = window is null ? .4 : live ? 1 : .55,
             CornerRadius = new CornerRadius(2)
         };

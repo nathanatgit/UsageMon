@@ -64,8 +64,14 @@ public sealed class UsageMonitor : IDisposable
     private static BalanceSnapshot KeepLastGood(BalanceSnapshot previous, BalanceSnapshot next) =>
         next.State != UsageState.Live && previous.Amount.Length > 0 && previous.State is UsageState.Live or UsageState.Stale
             ? previous with { State = UsageState.Stale, Message = next.Message } : next;
-    internal static UsageSnapshot Merge(UsageSnapshot previous, UsageSnapshot next) => next.Windows.Count == 0 && previous.Windows.Count > 0
-        ? previous with { State = UsageState.Stale, Message = next.Message } : next;
+    internal static UsageSnapshot Merge(UsageSnapshot previous, UsageSnapshot next)
+    {
+        if (previous.Windows.Count == 0) return next;
+        // A failed refresh, or an older fallback reading (for example the Claude Code status-line file while
+        // the live request is rate limited), must never replace a newer reading.
+        bool older = next.Windows.Count > 0 && next.UpdatedAt is { } incoming && previous.UpdatedAt is { } known && incoming < known;
+        return next.Windows.Count == 0 || older ? previous with { State = UsageState.Stale, Message = next.Message } : next;
+    }
     private void LoadCache()
     {
         try

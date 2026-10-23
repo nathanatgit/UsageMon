@@ -77,7 +77,7 @@ internal static class Loc
         ("Claude rate limited · retry after ", "Claude 已限流 · 可在以下时间重试："),
         ("Balance unavailable (HTTP ", "余额不可用 (HTTP "),
         ("Claude usage unavailable (HTTP ", "Claude 用量不可用 (HTTP "),
-        ("Last received ", "最近收到 "),
+        ("Last received ", "最近更新 "),
         ("Resets in ", "重置倒计时 "),
         ("Resets at ", "重置于 "),
         ("Resets ", "重置于 "),

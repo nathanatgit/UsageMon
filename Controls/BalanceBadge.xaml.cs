@@ -20,7 +20,7 @@ public sealed partial class BalanceBadge : UserControl
     public BalanceBadge()
     {
         InitializeComponent();
-        _tip = new ToolTip { Content = _tooltipPanel, Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Top };
+        _tip = new ToolTip { MaxWidth = 560, Content = _tooltipPanel, Placement = Microsoft.UI.Xaml.Controls.Primitives.PlacementMode.Top };
         ToolTipService.SetToolTip(this, _tip);
     }
 

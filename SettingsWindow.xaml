@@ -34,12 +34,16 @@
             </StackPanel>
         </Grid>
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <Grid Padding="24,12,24,24" ColumnSpacing="16">
+            <Grid x:Name="Columns" Padding="24,12,24,24" ColumnSpacing="16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Spacing="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <StackPanel x:Name="LeftColumn" Grid.Column="0" Spacing="16">
                     <StackPanel Spacing="8">
                         <TextBlock Text="Panel" Style="{StaticResource Section}" />
                 <StackPanel Style="{StaticResource Card}">
@@ -126,7 +130,7 @@
                 </StackPanel>
                     </StackPanel>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Spacing="16">
+                <StackPanel x:Name="RightColumn" Grid.Column="1" Spacing="16">
                     <StackPanel Spacing="8">
                         <TextBlock Text="Appearance" Style="{StaticResource Section}" />
                 <StackPanel Style="{StaticResource Card}">
