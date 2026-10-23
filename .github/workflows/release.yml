@@ -1,0 +1,180 @@
+name: Release
+
+# Builds x64, x86 and ARM64 and publishes, per architecture:
+#   - a single-file portable exe
+#   - an MSI installer (WiX)
+#   - an MSIX package, plus one .msixbundle that contains all three
+# Push a tag such as v0.3.0 to create a GitHub release with every file attached.
+on:
+  push:
+    tags: ['v*']
+    branches: [release-workflow]   # test runs; builds only, no release
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version without the leading v (for example 0.3.0)'
+        required: false
+        default: '0.2.0'
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      msix_version: ${{ steps.v.outputs.msix_version }}
+    steps:
+      - id: v
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then v="${GITHUB_REF#refs/tags/v}";
+          elif [[ -n "${{ inputs.version }}" ]]; then v="${{ inputs.version }}";
+          else v="0.2.0"; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          # MSIX and MSI need four numeric parts; the Store requires the last one to be 0.
+          core="${v%%-*}"
+          IFS=. read -r a b c <<< "$core"
+          echo "msix_version=${a:-0}.${b:-0}.${c:-0}.0" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: prepare
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x64,   platform: x64,   rid: win-x64 }
+          - { arch: x86,   platform: x86,   rid: win-x86 }
+          - { arch: arm64, platform: ARM64, rid: win-arm64 }
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      MSIX_VERSION: ${{ needs.prepare.outputs.msix_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish (folder)
+        run: >
+          dotnet publish UsageMon.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.rid }}
+          --self-contained -p:DebugType=None -p:Version=$env:VERSION -o publish/folder
+
+      - name: Publish (portable single file)
+        run: >
+          dotnet publish UsageMon.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.rid }}
+          --self-contained -p:PublishSingleFile=true -p:EnableMsixTooling=true
+          -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
+          -p:DebugType=None -p:Version=$env:VERSION -o publish/single
+
+      - name: Collect portable exe
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item publish/single/UsageMon.exe "dist/UsageMon-$env:VERSION-${{ matrix.arch }}-portable.exe"
+
+      - name: Build MSI
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          & "$env:USERPROFILE/.dotnet/tools/wix.exe" build -arch ${{ matrix.arch }} -d Version=$env:MSIX_VERSION `
+            -bindpath "Publish=$PWD/publish/folder" `
+            -o "dist/UsageMon-$env:VERSION-${{ matrix.arch }}.msi" installer/UsageMon.wxs
+
+      - name: Build MSIX
+        run: |
+          # Identity: override with repository variables once the app name is reserved in Partner Center.
+          $name = '${{ vars.STORE_IDENTITY_NAME }}';             if (-not $name)  { $name = 'nathanatgit.UsageMon' }
+          $publisher = '${{ vars.STORE_PUBLISHER }}';             if (-not $publisher) { $publisher = 'CN=nathanatgit' }
+          $display = '${{ vars.STORE_PUBLISHER_DISPLAY_NAME }}';  if (-not $display) { $display = 'nathanatgit' }
+          $stage = 'publish/msix'
+          Copy-Item publish/folder $stage -Recurse
+          New-Item -ItemType Directory -Force "$stage/Assets" | Out-Null
+          Copy-Item installer/msix-assets/*.png "$stage/Assets/"
+          $manifest = Get-Content installer/AppxManifest.template.xml -Raw
+          $manifest = $manifest.Replace('{{IDENTITY_NAME}}', $name).Replace('{{PUBLISHER}}', $publisher).Replace('{{PUBLISHER_DISPLAY_NAME}}', $display).Replace('{{VERSION}}', $env:MSIX_VERSION).Replace('{{ARCH}}', '${{ matrix.arch }}')
+          Set-Content "$stage/AppxManifest.xml" $manifest -Encoding utf8
+          $makeappx = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter makeappx.exe | Where-Object FullName -Match '\\x64\\' | Sort-Object FullName -Descending | Select-Object -First 1
+          New-Item -ItemType Directory -Force dist/msix | Out-Null
+          & $makeappx.FullName pack /o /d $stage /p "dist/msix/UsageMon_${{ matrix.arch }}.msix"
+          if ($LASTEXITCODE -ne 0) { throw 'makeappx pack failed' }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.arch }}
+          path: dist/
+          if-no-files-found: error
+
+  bundle:
+    needs: [prepare, build]
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      MSIX_VERSION: ${{ needs.prepare.outputs.msix_version }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+
+      - name: Create the signing certificate
+        env:
+          SIGNING_PFX_BASE64: ${{ secrets.SIGNING_PFX_BASE64 }}
+          SIGNING_PFX_PASSWORD: ${{ secrets.SIGNING_PFX_PASSWORD }}
+        run: |
+          $publisher = '${{ vars.STORE_PUBLISHER }}'; if (-not $publisher) { $publisher = 'CN=nathanatgit' }
+          if ($env:SIGNING_PFX_BASE64) {
+            [IO.File]::WriteAllBytes("$PWD/signing.pfx", [Convert]::FromBase64String($env:SIGNING_PFX_BASE64))
+            "PFX_PASSWORD=$env:SIGNING_PFX_PASSWORD" | Out-File -Append $env:GITHUB_ENV
+          } else {
+            # No certificate supplied: make a throw-away self-signed one whose subject equals the package publisher.
+            $password = [Guid]::NewGuid().ToString('N')
+            $cert = New-SelfSignedCertificate -Type Custom -Subject $publisher -KeyUsage DigitalSignature -FriendlyName 'UsageMon' `
+              -CertStoreLocation 'Cert:\CurrentUser\My' -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}') -NotAfter (Get-Date).AddYears(3)
+            Export-PfxCertificate -Cert $cert -FilePath signing.pfx -Password (ConvertTo-SecureString $password -AsPlainText -Force) | Out-Null
+            Export-Certificate -Cert $cert -FilePath "dist/UsageMon-signing-certificate.cer" | Out-Null
+            "PFX_PASSWORD=$password" | Out-File -Append $env:GITHUB_ENV
+          }
+
+      - name: Sign the packages and build the bundle
+        run: |
+          $bin = "${env:ProgramFiles(x86)}\Windows Kits\10\bin"
+          $makeappx = Get-ChildItem $bin -Recurse -Filter makeappx.exe | Where-Object FullName -Match '\\x64\\' | Sort-Object FullName -Descending | Select-Object -First 1
+          $signtool = Get-ChildItem $bin -Recurse -Filter signtool.exe | Where-Object FullName -Match '\\x64\\' | Sort-Object FullName -Descending | Select-Object -First 1
+          $sign = { param($file) & $signtool.FullName sign /fd SHA256 /f signing.pfx /p $env:PFX_PASSWORD $file; if ($LASTEXITCODE -ne 0) { throw "signtool failed for $file" } }
+          Get-ChildItem dist/msix -Filter *.msix | ForEach-Object { & $sign $_.FullName }
+          $bundle = "dist/UsageMon-$env:VERSION.msixbundle"
+          & $makeappx.FullName bundle /o /d dist/msix /p $bundle /bv $env:MSIX_VERSION
+          if ($LASTEXITCODE -ne 0) { throw 'makeappx bundle failed' }
+          & $sign (Resolve-Path $bundle).Path
+          Remove-Item signing.pfx
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-files
+          path: |
+            dist/*.exe
+            dist/*.msi
+            dist/*.msixbundle
+            dist/*.cer
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [prepare, bundle]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-files
+          path: release
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" release/* --repo "${GITHUB_REPOSITORY}" --title "UsageMon ${GITHUB_REF_NAME}" --generate-notes

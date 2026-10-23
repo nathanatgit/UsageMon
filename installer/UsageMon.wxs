@@ -1,0 +1,25 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <!-- Built per architecture:  wix build -arch x64 -d Version=1.2.3.0 -bindpath Publish=<publish folder> UsageMon.wxs -->
+  <Package Name="UsageMon" Manufacturer="nathanatgit" Version="$(Version)" Language="1033"
+           UpgradeCode="6E0F2B6C-3A4D-4B57-9C1E-5D7A8F1C2B90" Scope="perMachine" InstallerVersion="500" Compressed="yes">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of UsageMon is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+    <Icon Id="AppIcon" SourceFile="..\Assets\UsageMon.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/nathanatgit/UsageMon" />
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="UsageMon">
+        <Files Include="!(bindpath.Publish)\**" />
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="StartMenuShortcut" Guid="*">
+        <Shortcut Id="UsageMonShortcut" Name="UsageMon" Description="Codex and Claude usage monitor"
+                  Target="[INSTALLFOLDER]UsageMon.exe" WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\nathanatgit\UsageMon" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+  </Package>
+</Wix>

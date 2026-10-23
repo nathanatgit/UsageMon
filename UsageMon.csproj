@@ -6,9 +6,8 @@
     <RootNamespace>UsageMon</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\UsageMon.ico</ApplicationIcon>
-    <Platforms>x64</Platforms>
-    <PlatformTarget>x64</PlatformTarget>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <Platforms>x86;x64;ARM64</Platforms>
+    <Platform Condition="'$(Platform)' == '' or '$(Platform)' == 'AnyCPU'">x64</Platform>
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
@@ -16,6 +15,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)' == 'x86'"><PlatformTarget>x86</PlatformTarget><RuntimeIdentifier>win-x86</RuntimeIdentifier></PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)' == 'x64'"><PlatformTarget>x64</PlatformTarget><RuntimeIdentifier>win-x64</RuntimeIdentifier></PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)' == 'ARM64'"><PlatformTarget>ARM64</PlatformTarget><RuntimeIdentifier>win-arm64</RuntimeIdentifier></PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.0.1" />
     <PackageReference Include="Microsoft.Graphics.Win2D" Version="1.4.0" />
