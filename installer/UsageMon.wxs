@@ -4,7 +4,7 @@
            UpgradeCode="6E0F2B6C-3A4D-4B57-9C1E-5D7A8F1C2B90" Scope="perMachine" InstallerVersion="500" Compressed="yes">
     <MajorUpgrade DowngradeErrorMessage="A newer version of UsageMon is already installed." />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
-    <Icon Id="AppIcon" SourceFile="..\Assets\UsageMon.ico" />
+    <Icon Id="AppIcon" SourceFile="!(bindpath.Publish)\Assets\UsageMon.ico" />
     <Property Id="ARPPRODUCTICON" Value="AppIcon" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/nathanatgit/UsageMon" />
 
