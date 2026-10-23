@@ -1,9 +1,9 @@
 name: Release
 
 # Builds x64, x86 and ARM64 and publishes, per architecture:
-#   - a single-file portable exe (self-contained)
+#   - a single-file portable exe (self-contained, trimmed)
 #   - a small framework-dependent zip (needs the .NET 8 runtime and the Windows App Runtime)
-#   - an MSI installer (WiX)
+#   - an MSI installer (WiX, self-contained, trimmed)
 #   - an MSIX package, plus one .msixbundle that contains all three
 # Push a tag such as v0.3.0 to create a GitHub release with every file attached.
 on:
@@ -65,12 +65,12 @@ jobs:
       - name: Publish (folder)
         run: >
           dotnet publish UsageMon.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.rid }}
-          --self-contained -p:DebugType=None -p:Version=$env:VERSION -o publish/folder
+          --self-contained -p:PublishTrimmed=true -p:DebugType=None -p:Version=$env:VERSION -o publish/folder
 
       - name: Publish (portable single file)
         run: >
           dotnet publish UsageMon.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.rid }}
-          --self-contained -p:PublishSingleFile=true -p:EnableMsixTooling=true
+          --self-contained -p:PublishTrimmed=true -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
           -p:DebugType=None -p:Version=$env:VERSION -o publish/single
 

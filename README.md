@@ -13,6 +13,17 @@ For your AI usage in WinUI3 style, with Mica and Arcylic material.
 
 Simple and native, no expensive settings and fancy UIs. Minimal and clean, click and leave it there.
 
+## Download
+
+Get the latest build from [Releases](https://github.com/nathanatgit/UsageMon/releases/latest), picking x64, x86 or arm64 to match your PC.
+
+| Build | Files | Needs |
+|---|---|---|
+| Self-contained | `…-portable.exe` (single file, no install), `….msi`, `….msixbundle` | Nothing else |
+| Framework-dependent (smallest) | `…-framework-dependent.zip` | [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) and [Windows App Runtime 2.0](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads) |
+
+The `.msixbundle` is self-signed: import `UsageMon-signing-certificate.cer` into *Trusted People* (or *Trusted Root Certification Authorities*) before installing it.
+
 ## UI Screenshots(支持简体中文和英文）
 
 **Panel layouts** — joined or separate, horizontal or vertical, and docked to a screen edge. The percentage text on the rings can be switched on or off in Settings.

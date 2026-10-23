@@ -18,6 +18,13 @@ public partial class App : Application
 
     public App()
     {
+        // Diagnostics: USAGEMON_TRACE=1 logs every managed exception, including ones swallowed by WinRT/XAML.
+        if (Environment.GetEnvironmentVariable("USAGEMON_TRACE") == "1")
+            AppDomain.CurrentDomain.FirstChanceException += (_, e) =>
+            {
+                try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "usagemon-trace.log"), e.Exception + Environment.NewLine + Environment.StackTrace + Environment.NewLine + "----" + Environment.NewLine); }
+                catch (IOException) { }
+            };
         UnhandledException += (_, e) =>
         {
             try { File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "startup-error.log"), e.Exception.ToString()); }
