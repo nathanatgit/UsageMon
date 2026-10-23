@@ -4,7 +4,7 @@ UsageMon is a small native Windows 11 app, built with C# and WinUI 3, that keeps
 
 ## Screenshots
 
-**Panel layouts** — joined or separate, horizontal or vertical, and docked to a screen edge. The percentage on each ring can be always shown, shown on hover, or hidden.
+**Panel layouts** — joined or separate, horizontal or vertical, and docked to a screen edge. The percentage text on the rings can be switched on or off in Settings.
 
 ![Panel layouts](docs/panel-layouts.png)
 
