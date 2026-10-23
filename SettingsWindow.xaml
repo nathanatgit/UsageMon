@@ -1,0 +1,222 @@
+<Window x:Class="UsageMon.SettingsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid x:Name="Root" Background="Transparent">
+        <Grid.Resources>
+            <Style x:Key="Card" TargetType="StackPanel">
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Spacing" Value="0" />
+            </Style>
+            <Style x:Key="Row" TargetType="Grid">
+                <Setter Property="MinHeight" Value="42" />
+                <Setter Property="Padding" Value="14,2" />
+            </Style>
+            <Style x:Key="Caption" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Style>
+            <Style x:Key="Section" TargetType="TextBlock" BasedOn="{StaticResource BodyStrongTextBlockStyle}">
+                <Setter Property="Margin" Value="2,0,0,0" />
+            </Style>
+        </Grid.Resources>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid x:Name="TitleBar" Grid.Row="0" Background="Transparent">
+            <StackPanel Orientation="Horizontal" Spacing="10" Margin="14,0,0,0" VerticalAlignment="Center">
+                <Image Source="Assets/UsageMon.ico" Width="16" Height="16" />
+                <TextBlock Text="UsageMon Settings" Style="{StaticResource CaptionTextBlockStyle}" />
+            </StackPanel>
+        </Grid>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <Grid Padding="24,12,24,24" ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Spacing="16">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Panel" Style="{StaticResource Section}" />
+                <StackPanel Style="{StaticResource Card}">
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Start with Windows" VerticalAlignment="Center" />
+                        <ToggleSwitch x:Name="StartupToggle" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0" Toggled="Startup_Toggled" />
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Show" VerticalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                            <CheckBox x:Name="CodexCheck" Content="Codex" MinWidth="0" Click="PanelOptions_Changed" />
+                            <CheckBox x:Name="ClaudeCheck" Content="Claude" MinWidth="0" Click="PanelOptions_Changed" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Layout" VerticalAlignment="Center" />
+                        <ComboBox x:Name="ModeCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="PanelOptions_Changed">
+                            <ComboBoxItem Content="Joined" />
+                            <ComboBoxItem Content="Separate" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Direction" VerticalAlignment="Center" />
+                        <ComboBox x:Name="LayoutCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="Layout_Changed">
+                            <ComboBoxItem Content="Horizontal" />
+                            <ComboBoxItem Content="Vertical" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Always on top" VerticalAlignment="Center" />
+                        <ToggleSwitch x:Name="OnTopToggle" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0" Toggled="Preference_Changed" />
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Snap to edges" VerticalAlignment="Center" />
+                        <ToggleSwitch x:Name="StickyToggle" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0" Toggled="PanelOptions_Changed" />
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Auto-hide at edge" VerticalAlignment="Center" />
+                        <ToggleSwitch x:Name="AutoHideToggle" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0" Toggled="PanelOptions_Changed" />
+                    </Grid>
+                </StackPanel>
+
+                
+                    </StackPanel>
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Taskbar" Style="{StaticResource Section}" />
+                <StackPanel Style="{StaticResource Card}">
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Taskbar meter" VerticalAlignment="Center" />
+                        <ToggleSwitch x:Name="TaskbarToggle" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0" Toggled="Taskbar_Changed" />
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Position" VerticalAlignment="Center" />
+                        <ComboBox x:Name="TaskbarAlignCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="Taskbar_Selection">
+                            <ComboBoxItem Content="Right" />
+                            <ComboBoxItem Content="Left" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Percentage text size" VerticalAlignment="Center" />
+                        <Slider x:Name="TaskbarTextSlider" Width="150" HorizontalAlignment="Right" Minimum="6" Maximum="16" StepFrequency="1" ValueChanged="TaskbarText_Changed" />
+                    </Grid>
+                </StackPanel>
+
+                
+                    </StackPanel>
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Experimental" Style="{StaticResource Section}" />
+                <StackPanel Style="{StaticResource Card}">
+                    <Grid Style="{StaticResource Row}">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="DeepSeek balance" />
+                            <TextBlock Text="Needs DEEPSEEK_API_KEY environment variable" Style="{StaticResource Caption}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="DeepSeekToggle" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0" Toggled="Experimental_Changed" />
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Kimi balance" />
+                            <TextBlock Text="Needs MOONSHOT_API_KEY environment variable" Style="{StaticResource Caption}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="KimiToggle" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0" Toggled="Experimental_Changed" />
+                    </Grid>
+                </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="16">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Appearance" Style="{StaticResource Section}" />
+                <StackPanel Style="{StaticResource Card}">
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Language" VerticalAlignment="Center" />
+                        <ComboBox x:Name="LanguageCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="Language_Changed">
+                            <ComboBoxItem Content="Follow system" />
+                            <ComboBoxItem Content="简体中文" />
+                            <ComboBoxItem Content="English" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Theme" VerticalAlignment="Center" />
+                        <ComboBox x:Name="ThemeCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="Appearance_Changed">
+                            <ComboBoxItem Content="Follow Windows" />
+                            <ComboBoxItem Content="Light" />
+                            <ComboBoxItem Content="Dark" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Size" VerticalAlignment="Center" />
+                        <Slider x:Name="PanelSizeSlider" Width="150" HorizontalAlignment="Right" Minimum="16" Maximum="192" StepFrequency="4" ValueChanged="PanelSize_Changed" />
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Show percentage" VerticalAlignment="Center" />
+                        <ComboBox x:Name="LabelModeCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="LabelMode_Changed">
+                            <ComboBoxItem Content="On hover" />
+                            <ComboBoxItem Content="Always" />
+                            <ComboBoxItem Content="Never" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Percentage text size" VerticalAlignment="Center" />
+                        <Slider x:Name="LabelSizeSlider" Width="150" HorizontalAlignment="Right" Minimum="8" Maximum="24" StepFrequency="1" ValueChanged="LabelSize_Changed" />
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Material" VerticalAlignment="Center" />
+                        <ComboBox x:Name="MaterialCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="Appearance_Changed">
+                            <ComboBoxItem Content="Mica" />
+                            <ComboBoxItem Content="Acrylic" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Transparency" VerticalAlignment="Center" />
+                        <Slider x:Name="TransparencySlider" Width="150" HorizontalAlignment="Right" Minimum="0" Maximum="100" StepFrequency="1" ValueChanged="Transparency_Changed" />
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Background image" />
+                            <TextBlock x:Name="ImageStatus" Style="{StaticResource Caption}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button x:Name="ChooseImageButton" Content="Choose PNG…" Click="ChooseImage_Click" />
+                            <Button x:Name="ClearImageButton" Content="Remove" Click="ClearImage_Click" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+
+                
+                    </StackPanel>
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Usage" Style="{StaticResource Section}" />
+                <StackPanel Style="{StaticResource Card}">
+                    <Grid Style="{StaticResource Row}">
+                        <StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,0,16,0">
+                            <TextBlock x:Name="CodexStatusText" Text="Codex · checking…" Style="{StaticResource Caption}" />
+                            <TextBlock x:Name="ClaudeStatusText" Text="Claude · checking…" Style="{StaticResource Caption}" />
+                        </StackPanel>
+                        <Button Content="Refresh" HorizontalAlignment="Right" VerticalAlignment="Center" Click="RefreshUsage_Click" />
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Auto refresh" VerticalAlignment="Center" />
+                        <ComboBox x:Name="RefreshIntervalCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="RefreshInterval_Changed">
+                            <ComboBoxItem Content="30 seconds" /><ComboBoxItem Content="1 minute" />
+                            <ComboBoxItem Content="2 minutes" /><ComboBoxItem Content="5 minutes" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="Claude Code status-line bridge" />
+                            <TextBlock x:Name="BridgeStatusText" Text="Fallback when sign-in expires." Style="{StaticResource Caption}" />
+                        </StackPanel>
+                        <Button Content="Enable" HorizontalAlignment="Right" VerticalAlignment="Center" Click="EnableBridge_Click" />
+                    </Grid>
+                </StackPanel>
+
+                
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</Window>

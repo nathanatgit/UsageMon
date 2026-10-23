@@ -1,0 +1,41 @@
+<Window x:Class="UsageMon.FloatingWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:UsageMon.Controls">
+    <Border x:Name="Surface" Background="Transparent" UseLayoutRounding="False"
+            IsTabStop="True" UseSystemFocusVisuals="False" AutomationProperties.Name="Usage monitor. Drag to move. Right-click for options."
+            PointerPressed="Surface_PointerPressed" PointerMoved="Surface_PointerMoved"
+            PointerEntered="Surface_PointerEntered" PointerExited="Surface_PointerExited"
+            PointerReleased="Surface_PointerReleased" PointerCaptureLost="Surface_PointerCaptureLost">
+        <Border.ContextFlyout>
+            <MenuFlyout Opening="PanelMenu_Opening" Closed="PanelMenu_Closed">
+                <MenuFlyoutItem Text="Settings" Click="Settings_Click"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE713;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                <MenuFlyoutItem Text="Refresh usage" Click="RefreshUsage_Click"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE72C;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                <MenuFlyoutItem x:Name="OnTopItem" Text="Always on top" Click="OnTop_Click"><MenuFlyoutItem.Icon><FontIcon x:Name="OnTopIcon" Glyph="&#xE73E;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem Text="Hide panel" Click="Hide_Click"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xED1A;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                <MenuFlyoutItem Text="Exit" Click="Exit_Click"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE711;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+            </MenuFlyout>
+        </Border.ContextFlyout>
+        <Grid>
+        <SystemBackdropElement x:Name="MaterialFeather" IsHitTestVisible="False" Margin="1" UseLayoutRounding="False" />
+        <SystemBackdropElement x:Name="MaterialEdge" IsHitTestVisible="False" Margin="2" UseLayoutRounding="False" />
+        <SystemBackdropElement x:Name="MaterialSurface" IsHitTestVisible="False" />
+        <Image x:Name="BackgroundImage" Margin="3.5" Stretch="UniformToFill" IsHitTestVisible="False" Visibility="Collapsed" />
+        <Border x:Name="MaterialRim" IsHitTestVisible="False" Margin="3" BorderThickness="0.75" UseLayoutRounding="False" />
+        <Grid x:Name="EdgeTab" Visibility="Collapsed" Margin="2" IsHitTestVisible="False">
+            <Border x:Name="EdgeTrack" Background="{ThemeResource TextFillColorPrimaryBrush}" Opacity="0.18" />
+            <Border x:Name="EdgeFill" Background="{ThemeResource AccentFillColorDefaultBrush}" HorizontalAlignment="Left" VerticalAlignment="Top" />
+        </Grid>
+        <Viewbox x:Name="PanelScale" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel x:Name="Panel" Margin="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <controls:QuotaBadge x:Name="CodexReadout" />
+            <controls:QuotaBadge x:Name="ClaudeReadout" />
+            <controls:BalanceBadge x:Name="DeepSeekReadout" Visibility="Collapsed" />
+            <controls:BalanceBadge x:Name="KimiReadout" Visibility="Collapsed" />
+        </StackPanel>
+        </Viewbox>
+        <Grid x:Name="SwapLayer" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Grid>
+    </Border>
+</Window>
