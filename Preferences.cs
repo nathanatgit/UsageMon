@@ -60,7 +60,7 @@ public sealed class Preferences
     {
         try
         {
-            var loaded = JsonSerializer.Deserialize<Preferences>(File.ReadAllText(SettingsPath)) ?? new();
+            var loaded = JsonSerializer.Deserialize(File.ReadAllText(SettingsPath), AppJsonContext.Default.Preferences) ?? new();
             if (loaded.ClaudeFirst)
             {
                 var order = loaded.NormalizedOrder();
@@ -79,7 +79,7 @@ public sealed class Preferences
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
-            File.WriteAllText(SettingsPath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+            File.WriteAllText(SettingsPath, JsonSerializer.Serialize(this, AppJsonContext.Default.Preferences));
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         { System.Diagnostics.Debug.WriteLine(e); }

@@ -9,6 +9,15 @@
     <Platforms>x86;x64;ARM64</Platforms>
     <Platform Condition="'$(Platform)' == '' or '$(Platform)' == 'AnyCPU'">x64</Platform>
     <UseWinUI>true</UseWinUI>
+    <!-- Without this, dotnet publish leaves out UsageMon.pri (the compiled XAML) and the app fails to start. -->
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <!-- resources.pri is found whatever the exe is called (UsageMon.pri only works for UsageMon.exe),
+         so the portable release can be renamed per version and architecture. -->
+    <ProjectPriFileName>resources.pri</ProjectPriFileName>
+    <!-- Keep build and release folders out of the project items, or they get packed into the single-file exe. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);publish/**;dist/**;docs/**;installer/**;.github/**;tests/**</DefaultItemExcludes>
+    <!-- TaskbarLayout uses classic COM interop for UI Automation; keep it available in trimmed builds. -->
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SelfContained>true</SelfContained>
@@ -18,8 +27,25 @@
   <PropertyGroup Condition="'$(Platform)' == 'x86'"><PlatformTarget>x86</PlatformTarget><RuntimeIdentifier>win-x86</RuntimeIdentifier></PropertyGroup>
   <PropertyGroup Condition="'$(Platform)' == 'x64'"><PlatformTarget>x64</PlatformTarget><RuntimeIdentifier>win-x64</RuntimeIdentifier></PropertyGroup>
   <PropertyGroup Condition="'$(Platform)' == 'ARM64'"><PlatformTarget>ARM64</PlatformTarget><RuntimeIdentifier>win-arm64</RuntimeIdentifier></PropertyGroup>
+  <!-- Trimmed builds (dotnet publish -p:PublishTrimmed=true). WinUI and the windowing projection are kept whole:
+       XAML calls back into our subclasses (Window, UserControl, SystemBackdrop) through interop types that are
+       only reached by reflection, and trimming them crashes the app at startup. Everything else is trimmed. -->
+  <PropertyGroup Condition="'$(PublishTrimmed)' == 'true'">
+    <TrimMode Condition="'$(TrimMode)' == ''">partial</TrimMode>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(PublishTrimmed)' == 'true'">
+    <TrimmerRootAssembly Include="Microsoft.WinUI" />
+    <TrimmerRootAssembly Include="Microsoft.InteractiveExperiences.Projection" />
+  </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.0.1" />
+    <!-- The Microsoft.WindowsAppSDK metapackage also pulls in AI, ML (onnxruntime, DirectML) and Widgets,
+         which UsageMon does not use. Reference only the parts it needs. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.Base" Version="2.0.3" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="2.0.20" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="2.0.12" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.0.12" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.DWrite" Version="2.0.26041403" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="2.0.1" />
     <PackageReference Include="Microsoft.Graphics.Win2D" Version="1.4.0" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4654" />
   </ItemGroup>

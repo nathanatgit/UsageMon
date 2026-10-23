@@ -80,12 +80,12 @@ public sealed class ClaudeUsageProvider : IDisposable
         try
         {
             string path = Path.Combine(UsageMonitor.DataFolder, "claude-cooldown.json");
-            if (File.Exists(path)) _nextRequest = JsonSerializer.Deserialize<DateTimeOffset>(File.ReadAllText(path));
+            if (File.Exists(path)) _nextRequest = JsonSerializer.Deserialize(File.ReadAllText(path), AppJsonContext.Default.DateTimeOffset);
             else
             {
                 // Conservative migration for an older cache without an exact retry timestamp.
                 string cache = Path.Combine(UsageMonitor.DataFolder, "usage-cache.json");
-                if (File.Exists(cache) && JsonSerializer.Deserialize<UsageSnapshot[]>(File.ReadAllText(cache))?
+                if (File.Exists(cache) && JsonSerializer.Deserialize(File.ReadAllText(cache), AppJsonContext.Default.UsageSnapshotArray)?
                     .Any(s => s.Provider == "Claude" && s.Message.StartsWith("Claude rate limited", StringComparison.Ordinal)) == true)
                 {
                     _nextRequest = DateTimeOffset.UtcNow.AddHours(1);
@@ -102,7 +102,7 @@ public sealed class ClaudeUsageProvider : IDisposable
         try
         {
             Directory.CreateDirectory(UsageMonitor.DataFolder);
-            File.WriteAllText(Path.Combine(UsageMonitor.DataFolder, "claude-cooldown.json"), JsonSerializer.Serialize(_nextRequest));
+            File.WriteAllText(Path.Combine(UsageMonitor.DataFolder, "claude-cooldown.json"), JsonSerializer.Serialize(_nextRequest, AppJsonContext.Default.DateTimeOffset));
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
     }

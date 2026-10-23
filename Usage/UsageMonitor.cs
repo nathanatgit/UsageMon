@@ -76,7 +76,7 @@ public sealed class UsageMonitor : IDisposable
     {
         try
         {
-            var cached = JsonSerializer.Deserialize<UsageSnapshot[]>(File.ReadAllText(Path.Combine(DataFolder, "usage-cache.json")));
+            var cached = JsonSerializer.Deserialize(File.ReadAllText(Path.Combine(DataFolder, "usage-cache.json")), AppJsonContext.Default.UsageSnapshotArray);
             foreach (var snapshot in cached ?? [])
             {
                 if (snapshot.Windows.Count == 0) continue;
@@ -94,7 +94,7 @@ public sealed class UsageMonitor : IDisposable
             Directory.CreateDirectory(DataFolder);
             string path = Path.Combine(DataFolder, "usage-cache.json");
             string temporary = path + ".tmp";
-            File.WriteAllText(temporary, JsonSerializer.Serialize(new[] { Codex, Claude }));
+            File.WriteAllText(temporary, JsonSerializer.Serialize(new[] { Codex, Claude }, AppJsonContext.Default.UsageSnapshotArray));
             File.Move(temporary, path, true);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
