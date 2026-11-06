@@ -40,7 +40,7 @@ public sealed partial class QuotaBadge : UserControl
         if (_provider != snapshot.Provider)
         {
             _provider = snapshot.Provider;
-            string data = snapshot.Provider == "Claude" ? ProviderLogos.Claude : ProviderLogos.OpenAI;
+            string data = ProviderLogos.For(snapshot.Provider);
             var shape = (Microsoft.UI.Xaml.Shapes.Path)XamlReader.Load($"<Path xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" Data=\"{data}\" />");
             var geometry = shape.Data;
             shape.Data = null; // WinUI geometry can only have one owning Path.

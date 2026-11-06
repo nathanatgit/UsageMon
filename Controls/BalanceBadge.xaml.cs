@@ -37,7 +37,7 @@ public sealed partial class BalanceBadge : UserControl
         if (_provider != snapshot.Provider)
         {
             _provider = snapshot.Provider;
-            string data = snapshot.Provider == "Kimi" ? ProviderLogos.Kimi : ProviderLogos.DeepSeek;
+            string data = ProviderLogos.For(snapshot.Provider);
             var shape = (Microsoft.UI.Xaml.Shapes.Path)Microsoft.UI.Xaml.Markup.XamlReader.Load($"<Path xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" Data=\"{data}\" />");
             var geometry = shape.Data;
             shape.Data = null; // WinUI geometry can only have one owning Path.

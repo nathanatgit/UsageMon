@@ -72,13 +72,13 @@ public sealed partial class TaskbarWindow : Window
     {
         CodexItem.Visibility = _preferences.ShowCodex ? Visibility.Visible : Visibility.Collapsed;
         ClaudeItem.Visibility = _preferences.ShowClaude ? Visibility.Visible : Visibility.Collapsed;
-        DeepSeekBox.Visibility = _preferences.ShowDeepSeek ? Visibility.Visible : Visibility.Collapsed;
-        KimiBox.Visibility = _preferences.ShowKimi ? Visibility.Visible : Visibility.Collapsed;
-        Strip.Children.Clear();
         var items = new Dictionary<string, UIElement> { ["Codex"] = CodexItem, ["Claude"] = ClaudeItem, ["DeepSeek"] = DeepSeekBox, ["Kimi"] = KimiBox };
+        foreach (var key in new[] { "DeepSeek", "Kimi" })
+            items[key].Visibility = _preferences.IsShown(key) ? Visibility.Visible : Visibility.Collapsed;
+        Strip.Children.Clear();
         foreach (string key in _preferences.NormalizedOrder()) Strip.Children.Add(items[key]);
         ApplyTheme();
-        CodexReadout.Labels = ClaudeReadout.Labels = Controls.LabelMode.Never;
+        foreach (var badge in new[] { CodexReadout, ClaudeReadout }) badge.Labels = Controls.LabelMode.Never;
         TaskbarLayout.RefreshInBackground();
         Reposition();
     }

@@ -111,23 +111,36 @@
                 
                     </StackPanel>
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Experimental" Style="{StaticResource Section}" />
+                        <TextBlock Text="Usage" Style="{StaticResource Section}" />
                 <StackPanel Style="{StaticResource Card}">
                     <Grid Style="{StaticResource Row}">
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="DeepSeek balance" />
-                            <TextBlock Text="Needs DEEPSEEK_API_KEY environment variable" Style="{StaticResource Caption}" />
+                        <StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,0,16,0">
+                            <TextBlock x:Name="CodexStatusText" Text="Codex · checking…" Style="{StaticResource Caption}" />
+                            <TextBlock x:Name="ClaudeStatusText" Text="Claude · checking…" Style="{StaticResource Caption}" />
                         </StackPanel>
-                        <ToggleSwitch x:Name="DeepSeekToggle" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0" Toggled="Experimental_Changed" />
+                        <Button Content="Refresh" HorizontalAlignment="Right" VerticalAlignment="Center" Click="RefreshUsage_Click" />
                     </Grid>
                     <Grid Style="{StaticResource Row}">
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Kimi balance" />
-                            <TextBlock Text="Needs MOONSHOT_API_KEY environment variable" Style="{StaticResource Caption}" />
+                        <TextBlock Text="Auto refresh" VerticalAlignment="Center" />
+                        <ComboBox x:Name="RefreshIntervalCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="RefreshInterval_Changed">
+                            <ComboBoxItem Content="30 seconds" /><ComboBoxItem Content="1 minute" />
+                            <ComboBoxItem Content="2 minutes" /><ComboBoxItem Content="5 minutes" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="Claude Code status-line bridge" />
+                            <TextBlock x:Name="BridgeStatusText" Text="Fallback when sign-in expires." Style="{StaticResource Caption}" />
                         </StackPanel>
-                        <ToggleSwitch x:Name="KimiToggle" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0" Toggled="Experimental_Changed" />
+                        <Button Content="Enable" HorizontalAlignment="Right" VerticalAlignment="Center" Click="EnableBridge_Click" />
                     </Grid>
                 </StackPanel>
+
+                
+                    </StackPanel>
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Experimental" Style="{StaticResource Section}" />
+                        <StackPanel x:Name="ExperimentalCard" Style="{StaticResource Card}" />
                     </StackPanel>
                 </StackPanel>
                 <StackPanel x:Name="RightColumn" Grid.Column="1" Spacing="16">
@@ -192,32 +205,48 @@
                 
                     </StackPanel>
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Usage" Style="{StaticResource Section}" />
+                        <TextBlock Text="Auto-hide handle" Style="{StaticResource Section}" />
                 <StackPanel Style="{StaticResource Card}">
                     <Grid Style="{StaticResource Row}">
-                        <StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,0,16,0">
-                            <TextBlock x:Name="CodexStatusText" Text="Codex · checking…" Style="{StaticResource Caption}" />
-                            <TextBlock x:Name="ClaudeStatusText" Text="Claude · checking…" Style="{StaticResource Caption}" />
-                        </StackPanel>
-                        <Button Content="Refresh" HorizontalAlignment="Right" VerticalAlignment="Center" Click="RefreshUsage_Click" />
+                        <CheckBox x:Name="Codex5Check" Content="Codex 5h" Tag="Codex:5h" MinWidth="0" Click="Handle_Changed" />
+                        <Button x:Name="Codex5Color" Tag="Codex:5h" HorizontalAlignment="Right" Padding="4" Click="HandleColor_Click" AutomationProperties.Name="Codex 5h colour">
+                            <Border x:Name="Codex5Swatch" Width="44" Height="16" CornerRadius="3" />
+                        </Button>
                     </Grid>
                     <Grid Style="{StaticResource Row}">
-                        <TextBlock Text="Auto refresh" VerticalAlignment="Center" />
-                        <ComboBox x:Name="RefreshIntervalCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="RefreshInterval_Changed">
-                            <ComboBoxItem Content="30 seconds" /><ComboBoxItem Content="1 minute" />
-                            <ComboBoxItem Content="2 minutes" /><ComboBoxItem Content="5 minutes" />
+                        <CheckBox x:Name="Codex7Check" Content="Codex 7d" Tag="Codex:7d" MinWidth="0" Click="Handle_Changed" />
+                        <Button x:Name="Codex7Color" Tag="Codex:7d" HorizontalAlignment="Right" Padding="4" Click="HandleColor_Click" AutomationProperties.Name="Codex 7d colour">
+                            <Border x:Name="Codex7Swatch" Width="44" Height="16" CornerRadius="3" />
+                        </Button>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <CheckBox x:Name="Claude5Check" Content="Claude 5h" Tag="Claude:5h" MinWidth="0" Click="Handle_Changed" />
+                        <Button x:Name="Claude5Color" Tag="Claude:5h" HorizontalAlignment="Right" Padding="4" Click="HandleColor_Click" AutomationProperties.Name="Claude 5h colour">
+                            <Border x:Name="Claude5Swatch" Width="44" Height="16" CornerRadius="3" />
+                        </Button>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <CheckBox x:Name="Claude7Check" Content="Claude 7d" Tag="Claude:7d" MinWidth="0" Click="Handle_Changed" />
+                        <Button x:Name="Claude7Color" Tag="Claude:7d" HorizontalAlignment="Right" Padding="4" Click="HandleColor_Click" AutomationProperties.Name="Claude 7d colour">
+                            <Border x:Name="Claude7Swatch" Width="44" Height="16" CornerRadius="3" />
+                        </Button>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Multiple bars" VerticalAlignment="Center" />
+                        <ComboBox x:Name="HandleModeCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="Handle_Selection">
+                            <ComboBoxItem Content="Stacked (thicker)" />
+                            <ComboBoxItem Content="Combined (longer)" />
                         </ComboBox>
                     </Grid>
                     <Grid Style="{StaticResource Row}">
-                        <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
-                            <TextBlock Text="Claude Code status-line bridge" />
-                            <TextBlock x:Name="BridgeStatusText" Text="Fallback when sign-in expires." Style="{StaticResource Caption}" />
-                        </StackPanel>
-                        <Button Content="Enable" HorizontalAlignment="Right" VerticalAlignment="Center" Click="EnableBridge_Click" />
+                        <TextBlock Text="Thickness" VerticalAlignment="Center" />
+                        <Slider x:Name="HandleThicknessSlider" Width="150" HorizontalAlignment="Right" Minimum="2" Maximum="16" StepFrequency="1" ValueChanged="HandleSize_Changed" />
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Length" VerticalAlignment="Center" />
+                        <Slider x:Name="HandleLengthSlider" Width="150" HorizontalAlignment="Right" Minimum="24" Maximum="200" StepFrequency="4" ValueChanged="HandleSize_Changed" />
                     </Grid>
                 </StackPanel>
-
-                
                     </StackPanel>
                 </StackPanel>
             </Grid>

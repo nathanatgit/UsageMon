@@ -123,7 +123,8 @@ public sealed partial class FloatingWindow : Window
     {
         var size = AppWindow.Size;
         NativeMethods.ShapePanel(WinRT.Interop.WindowNative.GetWindowHandle(this), size.Width, size.Height);
-        Surface.CornerRadius = new CornerRadius(Math.Min(size.Width, size.Height) / (2 * Math.Max(_scale, 1)));
+        // The collapsed handle is a rounded square, not a pill.
+        Surface.CornerRadius = new CornerRadius(IsAutoHidden ? 4 : Math.Min(size.Width, size.Height) / (2 * Math.Max(_scale, 1)));
         MaterialSurface.CornerRadius = Surface.CornerRadius;
         MaterialEdge.CornerRadius = Surface.CornerRadius;
         MaterialFeather.CornerRadius = Surface.CornerRadius;
@@ -165,30 +166,39 @@ public sealed partial class FloatingWindow : Window
         visual.Clip = visual.Compositor.CreateGeometricClip(geometry);
     }
 
+    private Dictionary<string, Controls.QuotaBadge>? _quotaBadges;
+    private Dictionary<string, Controls.QuotaBadge> QuotaBadges => _quotaBadges ??= new()
+    { ["Codex"] = CodexReadout, ["Claude"] = ClaudeReadout };
+    private Dictionary<string, FrameworkElement>? _badges;
+    private Dictionary<string, FrameworkElement> Badges => _badges ??= new(QuotaBadges.ToDictionary(p => p.Key, p => (FrameworkElement)p.Value))
+    { ["DeepSeek"] = DeepSeekReadout, ["Kimi"] = KimiReadout };
+
     public void ApplyPreferences()
     {
         _placing = true;
         try
         {
             ApplyAppearance();
-            CodexReadout.LabelSize = ClaudeReadout.LabelSize = double.IsFinite(_preferences.LabelSize) ? _preferences.LabelSize : 16;
             var labels = _preferences.LabelMode switch { "Always" => Controls.LabelMode.Always, "Never" => Controls.LabelMode.Never, _ => Controls.LabelMode.Hover };
-            CodexReadout.Labels = ClaudeReadout.Labels = labels;
+            foreach (var badge in QuotaBadges.Values)
+            {
+                badge.LabelSize = double.IsFinite(_preferences.LabelSize) ? _preferences.LabelSize : 16;
+                badge.Labels = labels;
+            }
             Reveal();
             bool joined = Kind == PanelKind.Joined;
             CodexReadout.Visibility = Kind != PanelKind.Claude && _preferences.ShowCodex && !(joined && _preferences.SeparatePanels) ? Visibility.Visible : Visibility.Collapsed;
             ClaudeReadout.Visibility = Kind != PanelKind.Codex && _preferences.ShowClaude && !(joined && _preferences.SeparatePanels) ? Visibility.Visible : Visibility.Collapsed;
-            DeepSeekReadout.Visibility = joined && _preferences.ShowDeepSeek ? Visibility.Visible : Visibility.Collapsed;
-            KimiReadout.Visibility = joined && _preferences.ShowKimi ? Visibility.Visible : Visibility.Collapsed;
+            // DeepSeek and Kimi only appear in the joined panel.
+            foreach (var extra in new[] { "DeepSeek", "Kimi" })
+                Badges[extra].Visibility = joined && _preferences.IsShown(extra) ? Visibility.Visible : Visibility.Collapsed;
             Panel.Orientation = _preferences.Vertical ? Microsoft.UI.Xaml.Controls.Orientation.Vertical : Microsoft.UI.Xaml.Controls.Orientation.Horizontal;
             Panel.Children.Clear();
-            var badges = new Dictionary<string, FrameworkElement>
-            { ["Codex"] = CodexReadout, ["Claude"] = ClaudeReadout, ["DeepSeek"] = DeepSeekReadout, ["Kimi"] = KimiReadout };
             _visibleKeys.Clear();
             foreach (string key in _preferences.NormalizedOrder())
             {
-                Panel.Children.Add(badges[key]);
-                if (badges[key].Visibility == Visibility.Visible) _visibleKeys.Add(key);
+                Panel.Children.Add(Badges[key]);
+                if (Badges[key].Visibility == Visibility.Visible) _visibleKeys.Add(key);
             }
             BuildSwapButtons();
             ((OverlappedPresenter)AppWindow.Presenter).IsAlwaysOnTop = _preferences.AlwaysOnTop;
@@ -284,7 +294,8 @@ public sealed partial class FloatingWindow : Window
         Panel.Margin = new Thickness(0);
         BackgroundImage.Visibility = Visibility.Collapsed;
         bool side = _dockedEdge is "left" or "right";
-        AppWindow.ResizeClient(new SizeInt32((int)Math.Ceiling((side ? 8 : 72) * _scale), (int)Math.Ceiling((side ? 72 : 8) * _scale)));
+        var (cross, along) = HandleSize();
+        AppWindow.ResizeClient(new SizeInt32((int)Math.Ceiling((side ? cross : along) * _scale), (int)Math.Ceiling((side ? along : cross) * _scale)));
         UpdateShape();
         UpdateEdgeBar();
         int x = side ? _expandedBounds.X : _expandedBounds.X + (_expandedBounds.Width - AppWindow.Size.Width) / 2;
@@ -294,27 +305,72 @@ public sealed partial class FloatingWindow : Window
         MoveTo(new PointInt32(x, y));
     }
 
-    // The collapsed handle doubles as a bar for the first visible quota's five-hour usage.
-    private Usage.UsageSnapshot? _codexSnapshot, _claudeSnapshot;
+    // The collapsed handle shows the chosen quota windows, stacked (thicker) or end to end (longer).
+    private Dictionary<string, Usage.UsageSnapshot> _quotaSnapshots = [];
+    private const double HandleGap = 2, HandleInset = 2;
+    private List<string> HandleBarKeys()
+    {
+        var keys = Preferences.HandleKeys.Where(k => _preferences.HandleBars.Contains(k)
+            && _visibleKeys.Contains(k[..k.IndexOf(':')])).ToList();
+        // Separate panels each show only their own provider.
+        if (Kind != PanelKind.Joined) keys = keys.Where(k => k.StartsWith(Kind + ":")).ToList();
+        var order = _preferences.NormalizedOrder();
+        return keys.OrderBy(k => order.IndexOf(k[..k.IndexOf(':')])).ThenBy(k => k).ToList();
+    }
+    // (thickness, length) of the collapsed window in DIPs, before orientation is applied.
+    private (double Cross, double Along) HandleSize()
+    {
+        int n = Math.Max(1, HandleBarKeys().Count);
+        double t = Math.Clamp(_preferences.HandleThickness, 2, 16), l = Math.Clamp(_preferences.HandleLength, 24, 200);
+        bool stacked = _preferences.HandleMode != "Combined";
+        double pad = HandleInset * 2;
+        return stacked ? (pad + n * t + (n - 1) * HandleGap, pad + l) : (pad + t, pad + n * l + (n - 1) * HandleGap);
+    }
+    private static Windows.UI.Color Hex(string hex, byte alpha = 255) =>
+        Windows.UI.Color.FromArgb(alpha, Convert.ToByte(hex.Substring(1, 2), 16), Convert.ToByte(hex.Substring(3, 2), 16), Convert.ToByte(hex.Substring(5, 2), 16));
+    // The unfilled part is a washed-out, grayed version of the bar colour.
+    private static Windows.UI.Color Grayed(Windows.UI.Color c)
+    {
+        byte gray = (byte)(.3 * c.R + .59 * c.G + .11 * c.B);
+        byte Mix(byte v) => (byte)(gray * .75 + v * .25);
+        return Windows.UI.Color.FromArgb(110, Mix(c.R), Mix(c.G), Mix(c.B));
+    }
     private void UpdateEdgeBar()
     {
         if (!IsAutoHidden || _dockedEdge is null) return;
         bool side = _dockedEdge is "left" or "right";
-        // The collapsed handle is 8 x 72 DIP (or 72 x 8) with a 2 DIP inset.
-        double length = 68, thickness = 4;
+        bool stacked = _preferences.HandleMode != "Combined";
+        double t = Math.Clamp(_preferences.HandleThickness, 2, 16), l = Math.Clamp(_preferences.HandleLength, 24, 200);
         var now = DateTimeOffset.UtcNow;
-        string? first = _visibleKeys.FirstOrDefault(k => k is "Codex" or "Claude");
-        var snapshot = first == "Claude" ? _claudeSnapshot : first == "Codex" ? _codexSnapshot : null;
-        double percent = snapshot?.FindWindow("5h", now)?.UsedPercent ?? 0;
-        double fill = percent <= 0 ? 0 : Math.Clamp(length * percent / 100, thickness, length);
-        EdgeTrack.CornerRadius = EdgeFill.CornerRadius = new CornerRadius(thickness / 2);
-        EdgeFill.Width = side ? thickness : fill;
-        EdgeFill.Height = side ? fill : thickness;
-        // Side handles fill from the bottom up; top/bottom handles fill left to right.
-        EdgeFill.HorizontalAlignment = HorizontalAlignment.Left;
-        EdgeFill.VerticalAlignment = side ? VerticalAlignment.Bottom : VerticalAlignment.Top;
-        EdgeFill.Visibility = fill > 0 ? Visibility.Visible : Visibility.Collapsed;
-        EdgeFill.Opacity = snapshot?.State == Usage.UsageState.Live ? 1 : .55;
+        var keys = HandleBarKeys();
+        EdgeTab.Children.Clear();
+        // Bars run along the docked edge. Stacked bars sit side by side across it; combined bars follow one another along it.
+        var strip = new StackPanel
+        {
+            Spacing = HandleGap, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
+            Orientation = (side == stacked) ? Microsoft.UI.Xaml.Controls.Orientation.Horizontal : Microsoft.UI.Xaml.Controls.Orientation.Vertical
+        };
+        if (keys.Count == 0) keys.Add(""); // nothing chosen: an empty neutral track
+        foreach (string key in keys)
+        {
+            var snapshot = key.Length == 0 ? null : _quotaSnapshots.GetValueOrDefault(key[..key.IndexOf(':')]);
+            double percent = key.Length == 0 ? 0 : snapshot?.FindWindow(key[(key.IndexOf(':') + 1)..], now)?.UsedPercent ?? 0;
+            var color = key.Length == 0 ? Windows.UI.Color.FromArgb(255, 128, 128, 128) : Hex(_preferences.HandleColor(key));
+            double fill = percent <= 0 ? 0 : Math.Clamp(l * percent / 100, t, l);
+            var cell = new Grid { Width = side ? t : l, Height = side ? l : t };
+            cell.Children.Add(new Border { CornerRadius = new CornerRadius(Math.Min(2, t / 2)), Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Grayed(color)) });
+            if (fill > 0)
+                cell.Children.Add(new Border
+                {
+                    CornerRadius = new CornerRadius(Math.Min(2, t / 2)), Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(color),
+                    Width = side ? t : fill, Height = side ? fill : t, HorizontalAlignment = HorizontalAlignment.Left,
+                    // Side handles fill from the bottom up; top/bottom handles fill left to right.
+                    VerticalAlignment = side ? VerticalAlignment.Bottom : VerticalAlignment.Top,
+                    Opacity = snapshot?.State == Usage.UsageState.Live ? 1 : .55
+                });
+            strip.Children.Add(cell);
+        }
+        EdgeTab.Children.Add(strip);
     }
 
     private void Reveal()
@@ -407,8 +463,8 @@ public sealed partial class FloatingWindow : Window
     public void ApplyAppearance()
     {
         Surface.RequestedTheme = _preferences.ThemeValue;
-        CodexReadout.SetTheme(_preferences.ThemeValue); ClaudeReadout.SetTheme(_preferences.ThemeValue);
-        DeepSeekReadout.SetTheme(_preferences.ThemeValue); KimiReadout.SetTheme(_preferences.ThemeValue);
+        foreach (var badge in QuotaBadges.Values) badge.SetTheme(_preferences.ThemeValue);
+        foreach (var badge in new[] { DeepSeekReadout, KimiReadout }) badge.SetTheme(_preferences.ThemeValue);
         _backdrop.Configure(_preferences);
         _edgeBackdrop.Configure(_preferences);
         _featherBackdrop.Configure(_preferences);
@@ -494,13 +550,11 @@ public sealed partial class FloatingWindow : Window
         DeepSeekReadout.Update(deepSeek);
         KimiReadout.Update(kimi);
     }
-    public void UpdateUsage(Usage.UsageSnapshot codex, Usage.UsageSnapshot claude)
+    public void UpdateUsage(Dictionary<string, Usage.UsageSnapshot> quotas)
     {
         var now = DateTimeOffset.UtcNow;
-        CodexReadout.Update(codex, now);
-        ClaudeReadout.Update(claude, now);
-        _codexSnapshot = codex;
-        _claudeSnapshot = claude;
+        foreach (var (key, badge) in QuotaBadges) if (quotas.TryGetValue(key, out var snapshot)) badge.Update(snapshot, now);
+        _quotaSnapshots = quotas;
         UpdateEdgeBar();
     }
     private void Hide_Click(object sender, RoutedEventArgs e) => HideRequested?.Invoke();
