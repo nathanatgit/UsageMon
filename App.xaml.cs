@@ -96,7 +96,8 @@ public partial class App : Application
     {
         if (_exiting) return;
         _taskbar.UpdateUsage(_usage.Codex, _usage.Claude, _usage.DeepSeek, _usage.Kimi);
-        foreach (var panel in _panels) { panel.UpdateUsage(_usage.Codex, _usage.Claude); panel.UpdateBalances(_usage.DeepSeek, _usage.Kimi); }
+        var quotas = _usage.Quotas;
+        foreach (var panel in _panels) { panel.UpdateUsage(quotas); panel.UpdateBalances(_usage.DeepSeek, _usage.Kimi); }
         _settings?.UpdateUsage(_usage.Codex, _usage.Claude);
     }
 
@@ -121,7 +122,8 @@ public partial class App : Application
             panel.ApplyPreferences();
             bool enabled = panel.Kind switch
             {
-                PanelKind.Joined => (!_preferences.SeparatePanels && (_preferences.ShowCodex || _preferences.ShowClaude)) || _preferences.ShowDeepSeek || _preferences.ShowKimi,
+                PanelKind.Joined => (!_preferences.SeparatePanels && (_preferences.ShowCodex || _preferences.ShowClaude))
+                    || Preferences.AllProviders.Skip(2).Any(_preferences.IsShown),
                 PanelKind.Codex => _preferences.SeparatePanels && _preferences.ShowCodex,
                 _ => _preferences.SeparatePanels && _preferences.ShowClaude
             };

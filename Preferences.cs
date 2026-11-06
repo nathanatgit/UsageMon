@@ -12,12 +12,25 @@ public sealed class Preferences
     public bool ShowCodex { get; set; } = true;
     public bool ShowClaude { get; set; } = true;
     public bool ClaudeFirst { get; set; } // legacy; migrated into Order on load
-    public List<string> Order { get; set; } = ["Codex", "Claude", "DeepSeek", "Kimi"];
+    public List<string> Order { get; set; } = [.. AllProviders];
+    public static readonly string[] AllProviders = ["Codex", "Claude", "DeepSeek", "Kimi"];
+    public void SetShown(string key, bool value)
+    {
+        switch (key)
+        {
+            case "DeepSeek": ShowDeepSeek = value; break;
+            case "Kimi": ShowKimi = value; break;
+        }
+    }
+    public bool IsShown(string key) => key switch
+    {
+        "Codex" => ShowCodex, "Claude" => ShowClaude, "DeepSeek" => ShowDeepSeek, "Kimi" => ShowKimi, _ => false
+    };
     // Every provider exactly once, in the saved order.
     public List<string> NormalizedOrder()
     {
-        var order = Order.Where(k => k is "Codex" or "Claude" or "DeepSeek" or "Kimi").Distinct().ToList();
-        foreach (var key in new[] { "Codex", "Claude", "DeepSeek", "Kimi" }) if (!order.Contains(key)) order.Add(key);
+        var order = Order.Where(AllProviders.Contains).Distinct().ToList();
+        foreach (var key in AllProviders) if (!order.Contains(key)) order.Add(key);
         return order;
     }
     // Swap two neighbouring visible providers (by their position among the visible ones).
@@ -29,6 +42,16 @@ public sealed class Preferences
         (order[a], order[b]) = (order[b], order[a]);
         Order = order;
     }
+    // Auto-hide handle: which quota windows it shows ("Provider:window"), their colours, and how they are arranged.
+    public static readonly string[] HandleKeys = ["Codex:5h", "Codex:7d", "Claude:5h", "Claude:7d"];
+    public static readonly Dictionary<string, string> DefaultHandleColors = new()
+    { ["Codex:5h"] = "#3B82F6", ["Codex:7d"] = "#8B5CF6", ["Claude:5h"] = "#D97757", ["Claude:7d"] = "#E0A458" };
+    public List<string> HandleBars { get; set; } = ["Codex:5h", "Claude:5h"];
+    public Dictionary<string, string> HandleColors { get; set; } = [];
+    public string HandleMode { get; set; } = "Stacked"; // Stacked: bars side by side (thicker); Combined: bars end to end (longer)
+    public double HandleThickness { get; set; } = 4; // DIP, per bar
+    public double HandleLength { get; set; } = 68;    // DIP, per bar
+    public string HandleColor(string key) => HandleColors.TryGetValue(key, out var c) && c.Length == 7 && c[0] == '#' ? c : DefaultHandleColors[key];
     public string TaskbarAlign { get; set; } = "Right";
     public string Language { get; set; } = "System"; // System, zh-Hans or en
     public bool ShowTaskbar { get; set; }

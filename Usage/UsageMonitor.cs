@@ -15,6 +15,8 @@ public sealed class UsageMonitor : IDisposable
     public UsageSnapshot Claude { get; private set; } = UsageSnapshot.Initial("Claude");
     public BalanceSnapshot DeepSeek { get; private set; } = BalanceSnapshot.Initial("DeepSeek");
     public BalanceSnapshot Kimi { get; private set; } = BalanceSnapshot.Initial("Kimi");
+    // Quota snapshots by provider key, for the displays that treat every provider alike.
+    public Dictionary<string, UsageSnapshot> Quotas => new() { ["Codex"] = Codex, ["Claude"] = Claude };
     private readonly BalanceProviders _balances = new();
     public event Action? Updated;
     public UsageMonitor(Preferences preferences) { _preferences = preferences; _codex = new(preferences); LoadCache(); }
