@@ -38,6 +38,8 @@ The `.msixbundle` is self-signed: import `UsageMon-signing-certificate.cer` into
 
 ![Settings, light](docs/settings.png)
 
+![Settings, dark](docs/settings-dark.png)
+
 ## License
 
 [MIT](LICENSE). Third-party notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
