@@ -121,10 +121,13 @@ public sealed partial class SettingsWindow : Window
         RefreshIntervalCombo.SelectedIndex = _preferences.UsageRefreshSeconds switch { 30 => 0, 120 => 2, 300 => 3, _ => 1 };
         _ready = true;
     }
-    private void Startup_Toggled(object sender, RoutedEventArgs e)
+    private async void Startup_Toggled(object sender, RoutedEventArgs e)
     {
         if (!_ready) return;
-        if (!StartupRegistration.Set(StartupToggle.IsOn)) StartupToggle.IsOn = StartupRegistration.IsEnabled(); // could not write the Run key
+        if (await StartupRegistration.SetAsync(StartupToggle.IsOn)) return;
+        _ready = false; // could not enable it (write failure, or blocked in Windows Startup settings): show the real state
+        StartupToggle.IsOn = StartupRegistration.IsEnabled();
+        _ready = true;
     }
     private void Preference_Changed(object sender, RoutedEventArgs e)
     {
