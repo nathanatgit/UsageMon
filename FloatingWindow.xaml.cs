@@ -171,7 +171,7 @@ public sealed partial class FloatingWindow : Window
     { ["Codex"] = CodexReadout, ["Claude"] = ClaudeReadout };
     private Dictionary<string, FrameworkElement>? _badges;
     private Dictionary<string, FrameworkElement> Badges => _badges ??= new(QuotaBadges.ToDictionary(p => p.Key, p => (FrameworkElement)p.Value))
-    { ["DeepSeek"] = DeepSeekReadout, ["Kimi"] = KimiReadout };
+    { ["DeepSeek"] = DeepSeekReadout, ["Kimi"] = KimiReadout, ["Grok"] = GrokReadout, ["Copilot"] = CopilotReadout };
 
     public void ApplyPreferences()
     {
@@ -189,8 +189,8 @@ public sealed partial class FloatingWindow : Window
             bool joined = Kind == PanelKind.Joined;
             CodexReadout.Visibility = Kind != PanelKind.Claude && _preferences.ShowCodex && !(joined && _preferences.SeparatePanels) ? Visibility.Visible : Visibility.Collapsed;
             ClaudeReadout.Visibility = Kind != PanelKind.Codex && _preferences.ShowClaude && !(joined && _preferences.SeparatePanels) ? Visibility.Visible : Visibility.Collapsed;
-            // DeepSeek and Kimi only appear in the joined panel.
-            foreach (var extra in new[] { "DeepSeek", "Kimi" })
+            // DeepSeek, Kimi, Grok and Copilot only appear in the joined panel.
+            foreach (var extra in new[] { "DeepSeek", "Kimi", "Grok", "Copilot" })
                 Badges[extra].Visibility = joined && _preferences.IsShown(extra) ? Visibility.Visible : Visibility.Collapsed;
             Panel.Orientation = _preferences.Vertical ? Microsoft.UI.Xaml.Controls.Orientation.Vertical : Microsoft.UI.Xaml.Controls.Orientation.Horizontal;
             Panel.Children.Clear();
@@ -293,8 +293,14 @@ public sealed partial class FloatingWindow : Window
         EdgeTab.Visibility = Visibility.Visible;
         Panel.Margin = new Thickness(0);
         BackgroundImage.Visibility = Visibility.Collapsed;
+        ResizeHandle();
+    }
+    // Sizes and places the collapsed handle for the bars it currently shows.
+    private (double, double) _handleSizeShown;
+    private void ResizeHandle()
+    {
         bool side = _dockedEdge is "left" or "right";
-        var (cross, along) = HandleSize();
+        var (cross, along) = _handleSizeShown = HandleSize();
         AppWindow.ResizeClient(new SizeInt32((int)Math.Ceiling((side ? cross : along) * _scale), (int)Math.Ceiling((side ? along : cross) * _scale)));
         UpdateShape();
         UpdateEdgeBar();
@@ -304,26 +310,49 @@ public sealed partial class FloatingWindow : Window
         if (_dockedEdge == "bottom") y = _expandedBounds.Y + _expandedBounds.Height - AppWindow.Size.Height;
         MoveTo(new PointInt32(x, y));
     }
+    // New readings can add or drop bars (a plan without premium requests, say): resize the handle to match.
+    private void RefreshHandle()
+    {
+        if (!IsAutoHidden || _dockedEdge is null) return;
+        if (HandleSize() != _handleSizeShown) ResizeHandle(); else UpdateEdgeBar();
+    }
 
     // The collapsed handle shows the chosen quota windows, stacked (thicker) or end to end (longer).
     private Dictionary<string, Usage.UsageSnapshot> _quotaSnapshots = [];
+    private readonly Dictionary<string, Usage.BalanceSnapshot> _balanceSnapshots = [];
     private const double HandleGap = 2, HandleInset = 2;
+    // Quota-style balance providers only offer the bars their latest reading actually has.
+    private bool HasWindow(string key)
+    {
+        string provider = key[..key.IndexOf(':')], window = key[(key.IndexOf(':') + 1)..];
+        return provider is "Codex" or "Claude" || (_balanceSnapshots.TryGetValue(provider, out var balance) && balance.Windows?.Any(w => w.Name == window) == true);
+    }
     private List<string> HandleBarKeys()
     {
-        var keys = Preferences.HandleKeys.Where(k => _preferences.HandleBars.Contains(k)
-            && _visibleKeys.Contains(k[..k.IndexOf(':')])).ToList();
+        // Parallel mode selects whole providers: any chosen window of a provider brings all of its windows.
+        bool parallel = _preferences.HandleMode == "Parallel";
+        var keys = Preferences.HandleKeys.Where(k => (parallel ? _preferences.HandleBars.Any(b => b.StartsWith(k[..(k.IndexOf(':') + 1)])) : _preferences.HandleBars.Contains(k))
+            && _visibleKeys.Contains(k[..k.IndexOf(':')]) && HasWindow(k)).ToList();
         // Separate panels each show only their own provider.
         if (Kind != PanelKind.Joined) keys = keys.Where(k => k.StartsWith(Kind + ":")).ToList();
         var order = _preferences.NormalizedOrder();
-        return keys.OrderBy(k => order.IndexOf(k[..k.IndexOf(':')])).ThenBy(k => k).ToList();
+        return keys.OrderBy(k => order.IndexOf(k[..k.IndexOf(':')])).ThenBy(k => Array.IndexOf(Preferences.HandleKeys, k)).ToList();
     }
     // (thickness, length) of the collapsed window in DIPs, before orientation is applied.
     private (double Cross, double Along) HandleSize()
     {
-        int n = Math.Max(1, HandleBarKeys().Count);
+        var keys = HandleBarKeys();
+        int n = Math.Max(1, keys.Count);
         double t = Math.Clamp(_preferences.HandleThickness, 2, 16), l = Math.Clamp(_preferences.HandleLength, 24, 200);
         bool stacked = _preferences.HandleMode != "Combined";
         double pad = HandleInset * 2;
+        if (_preferences.HandleMode == "Parallel")
+        {
+            // A provider's bars sit side by side (thicker); providers follow one another (longer).
+            var groups = keys.GroupBy(k => k[..k.IndexOf(':')]).ToList();
+            int groupCount = Math.Max(1, groups.Count), widest = Math.Max(1, groups.Count == 0 ? 1 : groups.Max(g => g.Count()));
+            return (pad + widest * t + (widest - 1) * HandleGap, pad + groupCount * l + (groupCount - 1) * HandleGap);
+        }
         return stacked ? (pad + n * t + (n - 1) * HandleGap, pad + l) : (pad + t, pad + n * l + (n - 1) * HandleGap);
     }
     private static Windows.UI.Color Hex(string hex, byte alpha = 255) =>
@@ -345,16 +374,24 @@ public sealed partial class FloatingWindow : Window
         var keys = HandleBarKeys();
         EdgeTab.Children.Clear();
         // Bars run along the docked edge. Stacked bars sit side by side across it; combined bars follow one another along it.
+        bool parallel = _preferences.HandleMode == "Parallel";
+        var across = side ? Microsoft.UI.Xaml.Controls.Orientation.Horizontal : Microsoft.UI.Xaml.Controls.Orientation.Vertical;
+        var along = side ? Microsoft.UI.Xaml.Controls.Orientation.Vertical : Microsoft.UI.Xaml.Controls.Orientation.Horizontal;
+        // Parallel: one run of side-by-side bars per provider, the runs following one another along the edge.
         var strip = new StackPanel
         {
             Spacing = HandleGap, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
-            Orientation = (side == stacked) ? Microsoft.UI.Xaml.Controls.Orientation.Horizontal : Microsoft.UI.Xaml.Controls.Orientation.Vertical
+            Orientation = parallel ? along : stacked ? across : along
         };
+        var runs = new Dictionary<string, StackPanel>();
         if (keys.Count == 0) keys.Add(""); // nothing chosen: an empty neutral track
         foreach (string key in keys)
         {
-            var snapshot = key.Length == 0 ? null : _quotaSnapshots.GetValueOrDefault(key[..key.IndexOf(':')]);
-            double percent = key.Length == 0 ? 0 : snapshot?.FindWindow(key[(key.IndexOf(':') + 1)..], now)?.UsedPercent ?? 0;
+            string provider = key.Length == 0 ? "" : key[..key.IndexOf(':')];
+            var snapshot = key.Length == 0 ? null : _quotaSnapshots.GetValueOrDefault(provider);
+            var balance = _balanceSnapshots.GetValueOrDefault(provider);
+            string windowName = key.Length == 0 ? "" : key[(key.IndexOf(':') + 1)..];
+            double percent = key.Length == 0 ? 0 : balance is not null ? balance.Windows?.FirstOrDefault(w => w.Name == windowName)?.UsedPercent ?? 0 : snapshot?.FindWindow(windowName, now)?.UsedPercent ?? 0;
             var color = key.Length == 0 ? Windows.UI.Color.FromArgb(255, 128, 128, 128) : Hex(_preferences.HandleColor(key));
             double fill = percent <= 0 ? 0 : Math.Clamp(l * percent / 100, t, l);
             var cell = new Grid { Width = side ? t : l, Height = side ? l : t };
@@ -366,9 +403,22 @@ public sealed partial class FloatingWindow : Window
                     Width = side ? t : fill, Height = side ? fill : t, HorizontalAlignment = HorizontalAlignment.Left,
                     // Side handles fill from the bottom up; top/bottom handles fill left to right.
                     VerticalAlignment = side ? VerticalAlignment.Bottom : VerticalAlignment.Top,
-                    Opacity = snapshot?.State == Usage.UsageState.Live ? 1 : .55
+                    Opacity = (balance?.State ?? snapshot?.State) == Usage.UsageState.Live ? 1 : .55
                 });
-            strip.Children.Add(cell);
+            if (!parallel) { strip.Children.Add(cell); continue; }
+            if (!runs.TryGetValue(provider, out var run))
+            {
+                // A run shorter than the widest one sticks to the docked edge: left, right, top or bottom.
+                run = new StackPanel
+                {
+                    Spacing = HandleGap, Orientation = across,
+                    HorizontalAlignment = _dockedEdge == "right" ? HorizontalAlignment.Right : HorizontalAlignment.Left,
+                    VerticalAlignment = _dockedEdge == "bottom" ? VerticalAlignment.Bottom : VerticalAlignment.Top
+                };
+                runs[provider] = run;
+                strip.Children.Add(run);
+            }
+            run.Children.Add(cell);
         }
         EdgeTab.Children.Add(strip);
     }
@@ -464,7 +514,7 @@ public sealed partial class FloatingWindow : Window
     {
         Surface.RequestedTheme = _preferences.ThemeValue;
         foreach (var badge in QuotaBadges.Values) badge.SetTheme(_preferences.ThemeValue);
-        foreach (var badge in new[] { DeepSeekReadout, KimiReadout }) badge.SetTheme(_preferences.ThemeValue);
+        foreach (var badge in new[] { DeepSeekReadout, KimiReadout, GrokReadout, CopilotReadout }) badge.SetTheme(_preferences.ThemeValue);
         _backdrop.Configure(_preferences);
         _edgeBackdrop.Configure(_preferences);
         _featherBackdrop.Configure(_preferences);
@@ -545,17 +595,23 @@ public sealed partial class FloatingWindow : Window
     private void OnTop_Click(object sender, RoutedEventArgs e) { _preferences.AlwaysOnTop = !_preferences.AlwaysOnTop; ChangePreferences(); }
     private void Settings_Click(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke();
     private void RefreshUsage_Click(object sender, RoutedEventArgs e) => RefreshUsageRequested?.Invoke();
-    public void UpdateBalances(Usage.BalanceSnapshot deepSeek, Usage.BalanceSnapshot kimi)
+    public void UpdateBalances(Usage.BalanceSnapshot deepSeek, Usage.BalanceSnapshot kimi, Usage.BalanceSnapshot grok, Usage.BalanceSnapshot copilot)
     {
         DeepSeekReadout.Update(deepSeek);
         KimiReadout.Update(kimi);
+        GrokReadout.Update(grok);
+        CopilotReadout.Update(copilot);
+        _balanceSnapshots["Kimi"] = kimi;
+        _balanceSnapshots["Grok"] = grok;
+        _balanceSnapshots["Copilot"] = copilot;
+        RefreshHandle();
     }
     public void UpdateUsage(Dictionary<string, Usage.UsageSnapshot> quotas)
     {
         var now = DateTimeOffset.UtcNow;
         foreach (var (key, badge) in QuotaBadges) if (quotas.TryGetValue(key, out var snapshot)) badge.Update(snapshot, now);
         _quotaSnapshots = quotas;
-        UpdateEdgeBar();
+        RefreshHandle();
     }
     private void Hide_Click(object sender, RoutedEventArgs e) => HideRequested?.Invoke();
     private void Exit_Click(object sender, RoutedEventArgs e) => ExitRequested?.Invoke();

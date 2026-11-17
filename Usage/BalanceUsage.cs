@@ -7,22 +7,22 @@ namespace UsageMon.Usage;
 
 // Experimental: pay-per-use API balances (money, not a quota percentage).
 public sealed record BalanceSnapshot(string Provider, UsageState State, string Amount,
-    List<KeyValuePair<string, string>> Details, DateTimeOffset? UpdatedAt, string Message)
+    List<KeyValuePair<string, string>> Details, DateTimeOffset? UpdatedAt, string Message, string Noun = "balance", List<UsageWindow>? Windows = null)
 {
-    public static BalanceSnapshot Initial(string provider) => new(provider, UsageState.Loading, "", [], null, "Checking balance…");
-    public static BalanceSnapshot Failure(string provider, string message, UsageState state = UsageState.Unavailable) => new(provider, state, "", [], null, message);
-    public string Summary => State == UsageState.Live || State == UsageState.Stale ? $"{Provider} balance {Amount}" : $"{Provider} · {Message}";
+    public static BalanceSnapshot Initial(string provider, string noun = "balance") => new(provider, UsageState.Loading, "", [], null, "Checking balance…", noun);
+    public static BalanceSnapshot Failure(string provider, string message, UsageState state = UsageState.Unavailable, string noun = "balance") => new(provider, state, "", [], null, message, noun);
+    public string Summary => State == UsageState.Live || State == UsageState.Stale ? $"{Provider} {Noun} {Amount}" : $"{Provider} · {Message}";
 }
 
-public sealed class BalanceProviders : IDisposable
+public sealed partial class BalanceProviders : IDisposable
 {
     private readonly HttpClient _http = new(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(20) };
 
     public async Task<BalanceSnapshot> DeepSeekAsync(CancellationToken cancellation)
     {
         const string name = "DeepSeek";
-        string? key = Key("DEEPSEEK_API_KEY");
-        if (key is null) return BalanceSnapshot.Failure(name, "Set the DEEPSEEK_API_KEY environment variable, then restart UsageMon", UsageState.SignInRequired);
+        string? key = StoredKey("deepseek-key") ?? Key("DEEPSEEK_API_KEY");
+        if (key is null) return BalanceSnapshot.Failure(name, "Add your DeepSeek API key in Settings", UsageState.SignInRequired);
         try
         {
             using var response = await Send("https://api.deepseek.com/user/balance", key, cancellation);
@@ -55,11 +55,9 @@ public sealed class BalanceProviders : IDisposable
         { return BalanceSnapshot.Failure(name, "Could not read DeepSeek balance"); }
     }
 
-    public async Task<BalanceSnapshot> KimiAsync(CancellationToken cancellation)
+    private async Task<BalanceSnapshot> KimiBalanceAsync(string key, CancellationToken cancellation)
     {
         const string name = "Kimi";
-        string? key = Key("MOONSHOT_API_KEY") ?? Key("KIMI_API_KEY");
-        if (key is null) return BalanceSnapshot.Failure(name, "Set the MOONSHOT_API_KEY environment variable, then restart UsageMon", UsageState.SignInRequired);
         try
         {
             // Keys are region-specific: try the international host first, then mainland China.
@@ -83,6 +81,7 @@ public sealed class BalanceProviders : IDisposable
         { return BalanceSnapshot.Failure(name, "Could not read Kimi balance"); }
     }
 
+    private static string? StoredKey(string secret) => SecretStore.Load(secret) is { } value && !string.IsNullOrWhiteSpace(value) ? value.Trim() : null;
     private Task<HttpResponseMessage> Send(string url, string key, CancellationToken cancellation)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, url);

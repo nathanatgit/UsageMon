@@ -52,13 +52,6 @@
                         <ToggleSwitch x:Name="StartupToggle" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0" Toggled="Startup_Toggled" />
                     </Grid>
                     <Grid Style="{StaticResource Row}">
-                        <TextBlock Text="Show" VerticalAlignment="Center" />
-                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                            <CheckBox x:Name="CodexCheck" Content="Codex" MinWidth="0" Click="PanelOptions_Changed" />
-                            <CheckBox x:Name="ClaudeCheck" Content="Claude" MinWidth="0" Click="PanelOptions_Changed" />
-                        </StackPanel>
-                    </Grid>
-                    <Grid Style="{StaticResource Row}">
                         <TextBlock Text="Layout" VerticalAlignment="Center" />
                         <ComboBox x:Name="ModeCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="PanelOptions_Changed">
                             <ComboBoxItem Content="Joined" />
@@ -139,7 +132,7 @@
                 
                     </StackPanel>
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Experimental" Style="{StaticResource Section}" />
+                        <TextBlock Text="Providers" Style="{StaticResource Section}" />
                         <StackPanel x:Name="ExperimentalCard" Style="{StaticResource Card}" />
                     </StackPanel>
                 </StackPanel>
@@ -206,26 +199,26 @@
                     </StackPanel>
                     <StackPanel Spacing="8">
                         <TextBlock Text="Auto-hide handle" Style="{StaticResource Section}" />
-                <StackPanel Style="{StaticResource Card}">
-                    <Grid Style="{StaticResource Row}">
+                <StackPanel x:Name="HandleCard" Style="{StaticResource Card}">
+                    <Grid x:Name="Codex5Row" Style="{StaticResource Row}">
                         <CheckBox x:Name="Codex5Check" Content="Codex 5h" Tag="Codex:5h" MinWidth="0" Click="Handle_Changed" />
                         <Button x:Name="Codex5Color" Tag="Codex:5h" HorizontalAlignment="Right" Padding="4" Click="HandleColor_Click" AutomationProperties.Name="Codex 5h colour">
                             <Border x:Name="Codex5Swatch" Width="44" Height="16" CornerRadius="3" />
                         </Button>
                     </Grid>
-                    <Grid Style="{StaticResource Row}">
+                    <Grid x:Name="Codex7Row" Style="{StaticResource Row}">
                         <CheckBox x:Name="Codex7Check" Content="Codex 7d" Tag="Codex:7d" MinWidth="0" Click="Handle_Changed" />
                         <Button x:Name="Codex7Color" Tag="Codex:7d" HorizontalAlignment="Right" Padding="4" Click="HandleColor_Click" AutomationProperties.Name="Codex 7d colour">
                             <Border x:Name="Codex7Swatch" Width="44" Height="16" CornerRadius="3" />
                         </Button>
                     </Grid>
-                    <Grid Style="{StaticResource Row}">
+                    <Grid x:Name="Claude5Row" Style="{StaticResource Row}">
                         <CheckBox x:Name="Claude5Check" Content="Claude 5h" Tag="Claude:5h" MinWidth="0" Click="Handle_Changed" />
                         <Button x:Name="Claude5Color" Tag="Claude:5h" HorizontalAlignment="Right" Padding="4" Click="HandleColor_Click" AutomationProperties.Name="Claude 5h colour">
                             <Border x:Name="Claude5Swatch" Width="44" Height="16" CornerRadius="3" />
                         </Button>
                     </Grid>
-                    <Grid Style="{StaticResource Row}">
+                    <Grid x:Name="Claude7Row" Style="{StaticResource Row}">
                         <CheckBox x:Name="Claude7Check" Content="Claude 7d" Tag="Claude:7d" MinWidth="0" Click="Handle_Changed" />
                         <Button x:Name="Claude7Color" Tag="Claude:7d" HorizontalAlignment="Right" Padding="4" Click="HandleColor_Click" AutomationProperties.Name="Claude 7d colour">
                             <Border x:Name="Claude7Swatch" Width="44" Height="16" CornerRadius="3" />
@@ -236,6 +229,7 @@
                         <ComboBox x:Name="HandleModeCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="Handle_Selection">
                             <ComboBoxItem Content="Stacked (thicker)" />
                             <ComboBoxItem Content="Combined (longer)" />
+                            <ComboBoxItem Content="Parallel per provider" />
                         </ComboBox>
                     </Grid>
                     <Grid Style="{StaticResource Row}">

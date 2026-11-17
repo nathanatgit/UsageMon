@@ -22,6 +22,8 @@
             </StackPanel>
             <Viewbox x:Name="DeepSeekBox"><controls:BalanceBadge x:Name="DeepSeekReadout" /></Viewbox>
             <Viewbox x:Name="KimiBox"><controls:BalanceBadge x:Name="KimiReadout" /></Viewbox>
+            <Viewbox x:Name="GrokBox"><controls:BalanceBadge x:Name="GrokReadout" /></Viewbox>
+            <Viewbox x:Name="CopilotBox"><controls:BalanceBadge x:Name="CopilotReadout" /></Viewbox>
         </StackPanel>
     </Grid>
 </Window>

@@ -13,18 +13,22 @@ public sealed class Preferences
     public bool ShowClaude { get; set; } = true;
     public bool ClaudeFirst { get; set; } // legacy; migrated into Order on load
     public List<string> Order { get; set; } = [.. AllProviders];
-    public static readonly string[] AllProviders = ["Codex", "Claude", "DeepSeek", "Kimi"];
+    public static readonly string[] AllProviders = ["Codex", "Claude", "DeepSeek", "Kimi", "Grok", "Copilot"];
     public void SetShown(string key, bool value)
     {
         switch (key)
         {
+            case "Codex": ShowCodex = value; break;
+            case "Claude": ShowClaude = value; break;
             case "DeepSeek": ShowDeepSeek = value; break;
             case "Kimi": ShowKimi = value; break;
+            case "Grok": ShowGrok = value; break;
+            case "Copilot": ShowCopilot = value; break;
         }
     }
     public bool IsShown(string key) => key switch
     {
-        "Codex" => ShowCodex, "Claude" => ShowClaude, "DeepSeek" => ShowDeepSeek, "Kimi" => ShowKimi, _ => false
+        "Codex" => ShowCodex, "Claude" => ShowClaude, "DeepSeek" => ShowDeepSeek, "Kimi" => ShowKimi, "Grok" => ShowGrok, "Copilot" => ShowCopilot, _ => false
     };
     // Every provider exactly once, in the saved order.
     public List<string> NormalizedOrder()
@@ -43,12 +47,12 @@ public sealed class Preferences
         Order = order;
     }
     // Auto-hide handle: which quota windows it shows ("Provider:window"), their colours, and how they are arranged.
-    public static readonly string[] HandleKeys = ["Codex:5h", "Codex:7d", "Claude:5h", "Claude:7d"];
+    public static readonly string[] HandleKeys = ["Codex:5h", "Codex:7d", "Claude:5h", "Claude:7d", "Kimi:5h", "Kimi:weekly", "Grok:used", "Copilot:premium", "Copilot:chat", "Copilot:completions"];
     public static readonly Dictionary<string, string> DefaultHandleColors = new()
-    { ["Codex:5h"] = "#3B82F6", ["Codex:7d"] = "#8B5CF6", ["Claude:5h"] = "#D97757", ["Claude:7d"] = "#E0A458" };
+    { ["Codex:5h"] = "#3B82F6", ["Codex:7d"] = "#8B5CF6", ["Claude:5h"] = "#D97757", ["Claude:7d"] = "#E0A458", ["Kimi:5h"] = "#3B82F6", ["Kimi:weekly"] = "#60A5FA", ["Grok:used"] = "#9CA3AF", ["Copilot:premium"] = "#16A34A", ["Copilot:chat"] = "#22C55E", ["Copilot:completions"] = "#86EFAC" };
     public List<string> HandleBars { get; set; } = ["Codex:5h", "Claude:5h"];
     public Dictionary<string, string> HandleColors { get; set; } = [];
-    public string HandleMode { get; set; } = "Stacked"; // Stacked: bars side by side (thicker); Combined: bars end to end (longer)
+    public string HandleMode { get; set; } = "Stacked"; // Stacked: bars side by side (thicker); Combined: end to end (longer); Parallel: side by side within a provider, end to end between providers
     public double HandleThickness { get; set; } = 4; // DIP, per bar
     public double HandleLength { get; set; } = 68;    // DIP, per bar
     public string HandleColor(string key) => HandleColors.TryGetValue(key, out var c) && c.Length == 7 && c[0] == '#' ? c : DefaultHandleColors[key];
@@ -58,6 +62,8 @@ public sealed class Preferences
     public double TaskbarTextSize { get; set; } = 10;
     public bool ShowDeepSeek { get; set; }
     public bool ShowKimi { get; set; }
+    public bool ShowGrok { get; set; }
+    public bool ShowCopilot { get; set; }
     public string Theme { get; set; } = "System";
     [JsonIgnore] public ElementTheme ThemeValue => Theme switch { "Light" => ElementTheme.Light, "Dark" => ElementTheme.Dark, _ => ElementTheme.Default };
     public bool Sticky { get; set; } = true;

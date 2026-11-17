@@ -30,6 +30,8 @@
             <controls:QuotaBadge x:Name="ClaudeReadout" />
             <controls:BalanceBadge x:Name="DeepSeekReadout" Visibility="Collapsed" />
             <controls:BalanceBadge x:Name="KimiReadout" Visibility="Collapsed" />
+            <controls:BalanceBadge x:Name="GrokReadout" Visibility="Collapsed" />
+            <controls:BalanceBadge x:Name="CopilotReadout" Visibility="Collapsed" />
         </StackPanel>
         </Viewbox>
         <Grid x:Name="SwapLayer" HorizontalAlignment="Center" VerticalAlignment="Center" />
