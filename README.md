@@ -2,8 +2,6 @@
 
 <p align="center"><img src="docs/banner.png" alt="UsageMon: your AI coding quotas, always in view" width="100%"></p>
 
-<p align="center"><img src="docs/hero.png" alt="UsageMon panel and usage tooltip" width="360"></p>
-
 [![Downloads](https://img.shields.io/github/downloads/nathanatgit/UsageMon/total?label=downloads&color=0067c0)](https://github.com/nathanatgit/UsageMon/releases)
 [![Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-Get%20it-0067c0?logo=microsoft&logoColor=white)](https://apps.microsoft.com/detail/9N46FDXP5FWT)
 [![Latest release](https://img.shields.io/github/v/release/nathanatgit/UsageMon?color=0067c0)](https://github.com/nathanatgit/UsageMon/releases/latest)
