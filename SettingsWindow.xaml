@@ -82,26 +82,8 @@
                 
                     </StackPanel>
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Taskbar" Style="{StaticResource Section}" />
-                <StackPanel Style="{StaticResource Card}">
-                    <Grid Style="{StaticResource Row}">
-                        <TextBlock Text="Taskbar meter" VerticalAlignment="Center" />
-                        <ToggleSwitch x:Name="TaskbarToggle" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0" Toggled="Taskbar_Changed" />
-                    </Grid>
-                    <Grid Style="{StaticResource Row}">
-                        <TextBlock Text="Position" VerticalAlignment="Center" />
-                        <ComboBox x:Name="TaskbarAlignCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="Taskbar_Selection">
-                            <ComboBoxItem Content="Right" />
-                            <ComboBoxItem Content="Left" />
-                        </ComboBox>
-                    </Grid>
-                    <Grid Style="{StaticResource Row}">
-                        <TextBlock Text="Percentage text size" VerticalAlignment="Center" />
-                        <Slider x:Name="TaskbarTextSlider" Width="150" HorizontalAlignment="Right" Minimum="6" Maximum="16" StepFrequency="1" ValueChanged="TaskbarText_Changed" />
-                    </Grid>
-                </StackPanel>
-
-                
+                        <TextBlock Text="Providers" Style="{StaticResource Section}" />
+                        <StackPanel x:Name="ExperimentalCard" Style="{StaticResource Card}" />
                     </StackPanel>
                     <StackPanel Spacing="8">
                         <TextBlock Text="Usage" Style="{StaticResource Section}" />
@@ -110,6 +92,10 @@
                         <StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,0,16,0">
                             <TextBlock x:Name="CodexStatusText" Text="Codex · checking…" Style="{StaticResource Caption}" />
                             <TextBlock x:Name="ClaudeStatusText" Text="Claude · checking…" Style="{StaticResource Caption}" />
+                            <TextBlock x:Name="GrokStatusText" Visibility="Collapsed" Style="{StaticResource Caption}" />
+                            <TextBlock x:Name="CopilotStatusText" Visibility="Collapsed" Style="{StaticResource Caption}" />
+                            <TextBlock x:Name="KimiStatusText" Visibility="Collapsed" Style="{StaticResource Caption}" />
+                            <TextBlock x:Name="DeepSeekStatusText" Visibility="Collapsed" Style="{StaticResource Caption}" />
                         </StackPanel>
                         <Button Content="Refresh" HorizontalAlignment="Right" VerticalAlignment="Center" Click="RefreshUsage_Click" />
                     </Grid>
@@ -130,10 +116,6 @@
                 </StackPanel>
 
                 
-                    </StackPanel>
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Providers" Style="{StaticResource Section}" />
-                        <StackPanel x:Name="ExperimentalCard" Style="{StaticResource Card}" />
                     </StackPanel>
                 </StackPanel>
                 <StackPanel x:Name="RightColumn" Grid.Column="1" Spacing="16">
@@ -198,6 +180,28 @@
                 
                     </StackPanel>
                     <StackPanel Spacing="8">
+                        <TextBlock Text="Taskbar" Style="{StaticResource Section}" />
+                <StackPanel Style="{StaticResource Card}">
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Taskbar meter" VerticalAlignment="Center" />
+                        <ToggleSwitch x:Name="TaskbarToggle" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0" Toggled="Taskbar_Changed" />
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Position" VerticalAlignment="Center" />
+                        <ComboBox x:Name="TaskbarAlignCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="Taskbar_Selection">
+                            <ComboBoxItem Content="Right side" />
+                            <ComboBoxItem Content="Left side" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <TextBlock Text="Percentage text size" VerticalAlignment="Center" />
+                        <Slider x:Name="TaskbarTextSlider" Width="150" HorizontalAlignment="Right" Minimum="6" Maximum="16" StepFrequency="1" ValueChanged="TaskbarText_Changed" />
+                    </Grid>
+                </StackPanel>
+
+                
+                    </StackPanel>
+                    <StackPanel Spacing="8">
                         <TextBlock Text="Auto-hide handle" Style="{StaticResource Section}" />
                 <StackPanel x:Name="HandleCard" Style="{StaticResource Card}">
                     <Grid x:Name="Codex5Row" Style="{StaticResource Row}">
@@ -226,7 +230,7 @@
                     </Grid>
                     <Grid Style="{StaticResource Row}">
                         <TextBlock Text="Multiple bars" VerticalAlignment="Center" />
-                        <ComboBox x:Name="HandleModeCombo" Width="164" HorizontalAlignment="Right" SelectionChanged="Handle_Selection">
+                        <ComboBox x:Name="HandleModeCombo" Width="210" HorizontalAlignment="Right" SelectionChanged="Handle_Selection">
                             <ComboBoxItem Content="Stacked (thicker)" />
                             <ComboBoxItem Content="Combined (longer)" />
                             <ComboBoxItem Content="Parallel per provider" />

@@ -35,7 +35,7 @@ public sealed partial class BalanceProviders
             byte[] body = await response.Content.ReadAsByteArrayAsync(cancellation);
             if (!GrokBilling.TryParse(body, DateTimeOffset.UtcNow.ToUnixTimeSeconds(), out double used, out long? reset))
                 return BalanceSnapshot.Failure(name, "Could not read Grok quota", noun: "quota");
-            return Quota(name, used, reset, [], "SuperGrok credits · experimental");
+            return Quota(name, used, reset, [], "SuperGrok credits");
         }
         catch (OperationCanceledException) when (!cancellation.IsCancellationRequested) { return BalanceSnapshot.Failure(name, "Quota request timed out", noun: "quota"); }
         catch (Exception error) when (error is HttpRequestException or FormatException) { return BalanceSnapshot.Failure(name, "Could not read Grok quota", noun: "quota"); }
@@ -79,7 +79,7 @@ public sealed partial class BalanceProviders
                 details.Add(new(label, $"{remaining:0.#}% left{count}"));
             }
             if (windows.Count == 0)
-                return new(name, UsageState.Live, "∞", details, DateTimeOffset.UtcNow, "Copilot · no metered usage · experimental", "quota");
+                return new(name, UsageState.Live, "∞", details, DateTimeOffset.UtcNow, "Copilot · no metered usage", "quota");
             DateTimeOffset? reset = null;
             if ((Text(root, "quota_reset_date_utc") ?? Text(root, "quota_reset_date")) is { } text
                 && DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date))
@@ -89,7 +89,7 @@ public sealed partial class BalanceProviders
             // Premium requests are the headline when the plan has them; otherwise the most-used of chat/completions.
             double headline = windows.Any(w => w.Name == "premium") ? windows.First(w => w.Name == "premium").UsedPercent : windows.Max(w => w.UsedPercent);
             return new(name, UsageState.Live, $"{100 - headline:0}%", details, DateTimeOffset.UtcNow,
-                windows.Any(w => w.Name == "premium") ? "Copilot premium requests · experimental" : "Copilot chat/completions · experimental", "quota", windows);
+                windows.Any(w => w.Name == "premium") ? "Copilot premium requests" : "Copilot chat/completions", "quota", windows);
         }
         catch (OperationCanceledException) when (!cancellation.IsCancellationRequested) { return BalanceSnapshot.Failure(name, "Quota request timed out", noun: "quota"); }
         catch (Exception error) when (error is HttpRequestException or JsonException or FormatException) { return BalanceSnapshot.Failure(name, "Could not read Copilot quota", noun: "quota"); }

@@ -249,19 +249,37 @@ public sealed partial class SettingsWindow : Window
         _preferences.LabelSize = LabelSizeSlider.Value;
         _changed();
     }
+    private static string StateText(Usage.UsageState state) => Loc.T(state == Usage.UsageState.SignInRequired ? "Sign-in required" : state.ToString());
     // One short line per provider; the full details are in the panel tooltip.
     private static string Status(Usage.UsageSnapshot snapshot, DateTimeOffset now)
     {
-        string text = $"{snapshot.Provider} · {Loc.T(snapshot.State.ToString())}";
+        string text = $"{snapshot.Provider} · {StateText(snapshot.State)}";
         if (snapshot.Windows.Count > 0) text += " · " + snapshot.Summary(now).TrimStart('~', ' ');
         if (snapshot.State != Usage.UsageState.Live && snapshot.Message.Length > 0) text += "\n" + Loc.T(snapshot.Message);
         return text;
     }
-    public void UpdateUsage(Usage.UsageSnapshot codex, Usage.UsageSnapshot claude)
+    private static string Status(Usage.BalanceSnapshot snapshot)
+    {
+        string text = $"{snapshot.Provider} · {StateText(snapshot.State)}";
+        if (snapshot.State is Usage.UsageState.Live or Usage.UsageState.Stale) text += " · " + snapshot.Summary.Replace(snapshot.Provider + " ", "");
+        if (snapshot.State != Usage.UsageState.Live && snapshot.Message.Length > 0) text += "\n" + Loc.T(snapshot.Message);
+        return text;
+    }
+    private void ShowStatus(TextBlock box, string key, Usage.BalanceSnapshot snapshot)
+    {
+        bool shown = _preferences.IsShown(key);
+        box.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+        if (shown) box.Text = Status(snapshot);
+    }
+    public void UpdateUsage(Usage.UsageSnapshot codex, Usage.UsageSnapshot claude, Usage.BalanceSnapshot grok, Usage.BalanceSnapshot copilot, Usage.BalanceSnapshot kimi, Usage.BalanceSnapshot deepSeek)
     {
         var now = DateTimeOffset.UtcNow;
         CodexStatusText.Text = Status(codex, now);
         ClaudeStatusText.Text = Status(claude, now);
+        ShowStatus(GrokStatusText, "Grok", grok);
+        ShowStatus(CopilotStatusText, "Copilot", copilot);
+        ShowStatus(KimiStatusText, "Kimi", kimi);
+        ShowStatus(DeepSeekStatusText, "DeepSeek", deepSeek);
     }
     private void RefreshUsage_Click(object sender, RoutedEventArgs e) => RefreshUsageRequested?.Invoke();
     private void RefreshInterval_Changed(object sender, SelectionChangedEventArgs e)
