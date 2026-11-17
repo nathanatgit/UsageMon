@@ -162,7 +162,7 @@ public sealed partial class QuotaBadge : UserControl
         DrawRing(InnerTrack, InnerArc, _weeklyWindow, 31, _live, .55, gaps);
     }
 
-    private static PathGeometry RingGeometry(double radius, double percent, List<Rect> gaps)
+    internal static PathGeometry RingGeometry(double radius, double percent, List<Rect> gaps)
     {
         double end = percent / 100 * Math.PI * 2;
         var cuts = new List<double> { 0, end };

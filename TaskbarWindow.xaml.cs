@@ -46,7 +46,7 @@ public sealed partial class TaskbarWindow : Window
         Closed += (_, _) => _timer.Stop();
     }
 
-    public void UpdateUsage(Usage.UsageSnapshot codex, Usage.UsageSnapshot claude, Usage.BalanceSnapshot deepSeek, Usage.BalanceSnapshot kimi)
+    public void UpdateUsage(Usage.UsageSnapshot codex, Usage.UsageSnapshot claude, Usage.BalanceSnapshot deepSeek, Usage.BalanceSnapshot kimi, Usage.BalanceSnapshot grok, Usage.BalanceSnapshot copilot)
     {
         var now = DateTimeOffset.UtcNow;
         CodexReadout.Update(codex, now);
@@ -57,6 +57,8 @@ public sealed partial class TaskbarWindow : Window
         ClaudeText.Opacity = claude.State == Usage.UsageState.Live ? 1 : .6;
         DeepSeekReadout.Update(deepSeek);
         KimiReadout.Update(kimi);
+        GrokReadout.Update(grok);
+        CopilotReadout.Update(copilot);
     }
 
     // Two short lines beside the circle, e.g. "5h: 20%" and "7d: 10%".
@@ -72,8 +74,8 @@ public sealed partial class TaskbarWindow : Window
     {
         CodexItem.Visibility = _preferences.ShowCodex ? Visibility.Visible : Visibility.Collapsed;
         ClaudeItem.Visibility = _preferences.ShowClaude ? Visibility.Visible : Visibility.Collapsed;
-        var items = new Dictionary<string, UIElement> { ["Codex"] = CodexItem, ["Claude"] = ClaudeItem, ["DeepSeek"] = DeepSeekBox, ["Kimi"] = KimiBox };
-        foreach (var key in new[] { "DeepSeek", "Kimi" })
+        var items = new Dictionary<string, UIElement> { ["Codex"] = CodexItem, ["Claude"] = ClaudeItem, ["DeepSeek"] = DeepSeekBox, ["Kimi"] = KimiBox, ["Grok"] = GrokBox, ["Copilot"] = CopilotBox };
+        foreach (var key in new[] { "DeepSeek", "Kimi", "Grok", "Copilot" })
             items[key].Visibility = _preferences.IsShown(key) ? Visibility.Visible : Visibility.Collapsed;
         Strip.Children.Clear();
         foreach (string key in _preferences.NormalizedOrder()) Strip.Children.Add(items[key]);
@@ -94,7 +96,7 @@ public sealed partial class TaskbarWindow : Window
         }
         if (Root.RequestedTheme != theme) Root.RequestedTheme = theme;
         foreach (var badge in new[] { CodexReadout, ClaudeReadout }) badge.SetTheme(theme);
-        foreach (var badge in new[] { DeepSeekReadout, KimiReadout }) badge.SetTheme(theme);
+        foreach (var badge in new[] { DeepSeekReadout, KimiReadout, GrokReadout, CopilotReadout }) badge.SetTheme(theme);
     }
 
     private void Reposition()
@@ -106,9 +108,9 @@ public sealed partial class TaskbarWindow : Window
         double side = Math.Max(20, taskbarHeight / scale - 8);
         int count = Strip.Children.Count(c => c.Visibility == Visibility.Visible);
         if (count == 0) { AppWindow.Hide(); return; }
-        foreach (var box in new[] { CodexBox, ClaudeBox, DeepSeekBox, KimiBox }) { box.Width = side; box.Height = side; }
+        foreach (var box in new[] { CodexBox, ClaudeBox, DeepSeekBox, KimiBox, GrokBox, CopilotBox }) { box.Width = side; box.Height = side; }
         // Balance badges draw their amount inside the circle; rescale so it renders at the chosen DIP size.
-        DeepSeekReadout.TextSize = KimiReadout.TextSize = _preferences.TaskbarTextSize * 96 / side;
+        DeepSeekReadout.TextSize = KimiReadout.TextSize = GrokReadout.TextSize = CopilotReadout.TextSize = _preferences.TaskbarTextSize * 96 / side;
         foreach (var text in new[] { CodexText, ClaudeText })
         {
             text.FontSize = _preferences.TaskbarTextSize;

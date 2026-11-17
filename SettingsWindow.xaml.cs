@@ -22,6 +22,8 @@ public sealed partial class SettingsWindow : Window
         _appearanceChanged = appearanceChanged;
         InitializeComponent();
         BuildExperimental();
+        BuildExtraHandleRows();
+        BuildProviderHandleRows();
         Title = Loc.T("UsageMon Settings");
         Loc.Apply(Root);
         // Immersive title bar: our own drag area, with caption buttons coloured to match the theme.
@@ -90,8 +92,6 @@ public sealed partial class SettingsWindow : Window
         OnTopToggle.IsOn = _preferences.AlwaysOnTop;
         StartupToggle.IsOn = StartupRegistration.IsEnabled();
         ModeCombo.SelectedIndex = _preferences.SeparatePanels ? 1 : 0;
-        CodexCheck.IsChecked = _preferences.ShowCodex;
-        ClaudeCheck.IsChecked = _preferences.ShowClaude;
         StickyToggle.IsOn = _preferences.Sticky;
         AutoHideToggle.IsOn = _preferences.AutoHideEdges;
         AutoHideToggle.IsEnabled = _preferences.Sticky;
@@ -105,12 +105,15 @@ public sealed partial class SettingsWindow : Window
             box.IsChecked = _preferences.HandleBars.Contains(key);
             swatch.Background = new SolidColorBrush(ParseColor(_preferences.HandleColor(key)));
         }
-        HandleModeCombo.SelectedIndex = _preferences.HandleMode == "Combined" ? 1 : 0;
+        HandleModeCombo.SelectedIndex = _preferences.HandleMode switch { "Combined" => 1, "Parallel" => 2, _ => 0 };
+        foreach (var (provider, (_, providerBox)) in _providerHandleRows) providerBox.IsChecked = _preferences.HandleBars.Any(k => k.StartsWith(provider + ":"));
+        foreach (var (key, swatch) in _providerSwatches) swatch.Background = new SolidColorBrush(ParseColor(_preferences.HandleColor(key)));
         HandleThicknessSlider.Value = Math.Clamp(_preferences.HandleThickness, 2, 16);
         HandleLengthSlider.Value = Math.Clamp(_preferences.HandleLength, 24, 200);
         LanguageCombo.SelectedIndex = _preferences.Language switch { "zh-Hans" => 1, "en" => 2, _ => 0 };
         ThemeCombo.SelectedIndex = _preferences.Theme switch { "Light" => 1, "Dark" => 2, _ => 0 };
         foreach (var (key, toggle) in _experimentalToggles) toggle.IsOn = _preferences.IsShown(key);
+        UpdateExtraHandleRows();
         MaterialCombo.SelectedIndex = _preferences.Material == "Acrylic" ? 1 : 0;
         TransparencySlider.Value = Math.Clamp(_preferences.Transparency, 0, 100);
         PanelSizeSlider.Value = Math.Clamp(_preferences.PanelSize, 16, 192);
@@ -145,11 +148,87 @@ public sealed partial class SettingsWindow : Window
     {
         if (!_ready) return;
         _preferences.SeparatePanels = ModeCombo.SelectedIndex == 1;
-        _preferences.ShowCodex = CodexCheck.IsChecked == true;
-        _preferences.ShowClaude = ClaudeCheck.IsChecked == true;
         _preferences.Sticky = StickyToggle.IsOn;
         _preferences.AutoHideEdges = AutoHideToggle.IsOn;
         _changed();
+    }
+    // The panel checkboxes, the Experimental toggles and the handle rows all edit the same ShowGrok/ShowCopilot flags.
+    private void SyncExperimentalControls()
+    {
+        bool was = _ready;
+        _ready = false; // setting IsOn raises Toggled
+        foreach (var (key, toggle) in _experimentalToggles) toggle.IsOn = _preferences.IsShown(key);
+        UpdateExtraHandleRows();
+        _ready = was;
+    }
+    // One handle row per reading these providers can report.
+    private static readonly (string Key, string Label)[] ExtraHandleBars =
+    [
+        ("Kimi:5h", "Kimi 5h"), ("Kimi:weekly", "Kimi weekly"), ("Grok:used", "Grok"),
+        ("Copilot:premium", "Copilot premium"), ("Copilot:chat", "Copilot chat"), ("Copilot:completions", "Copilot completions")
+    ];
+    private readonly Dictionary<string, (Grid Row, CheckBox Box, Border Swatch)> _extraHandleRows = [];
+    private void BuildExtraHandleRows()
+    {
+        int index = 4; // after the four Codex/Claude rows, before "Multiple bars"
+        foreach (var (key, label) in ExtraHandleBars)
+        {
+            var box = new CheckBox { Content = Loc.T(label), Tag = key, MinWidth = 0 };
+            box.Click += Handle_Changed;
+            var swatch = new Border { Width = 44, Height = 16, CornerRadius = new CornerRadius(3) };
+            var color = new Button { Tag = key, Content = swatch, HorizontalAlignment = HorizontalAlignment.Right, Padding = new Thickness(4) };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(color, label + " colour");
+            color.Click += HandleColor_Click;
+            var row = new Grid { Style = (Style)Root.Resources["Row"], Visibility = Visibility.Collapsed };
+            row.Children.Add(box);
+            row.Children.Add(color);
+            HandleCard.Children.Insert(index++, row);
+            _extraHandleRows[key] = (row, box, swatch);
+        }
+    }
+    // Parallel mode picks whole providers (both windows); the other modes pick single windows.
+    private readonly Dictionary<string, (Grid Row, CheckBox Box)> _providerHandleRows = [];
+    private readonly List<(string Key, Border Swatch)> _providerSwatches = [];
+    private void BuildProviderHandleRows()
+    {
+        int index = 0;
+        foreach (string provider in new[] { "Codex", "Claude", "Kimi", "Grok", "Copilot" })
+        {
+            var box = new CheckBox { Content = provider, Tag = provider, MinWidth = 0 };
+            box.Click += HandleProvider_Changed;
+            var colors = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, HorizontalAlignment = HorizontalAlignment.Right };
+            foreach (string key in Preferences.HandleKeys.Where(k => k.StartsWith(provider + ":")))
+            {
+                var swatch = new Border { Width = 44, Height = 16, CornerRadius = new CornerRadius(3) };
+                var button = new Button { Tag = key, Content = swatch, Padding = new Thickness(4) };
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, key + " colour");
+                button.Click += HandleColor_Click;
+                colors.Children.Add(button);
+                _providerSwatches.Add((key, swatch));
+            }
+            var row = new Grid { Style = (Style)Root.Resources["Row"], Visibility = Visibility.Collapsed };
+            row.Children.Add(box);
+            row.Children.Add(colors);
+            HandleCard.Children.Insert(index++, row);
+            _providerHandleRows[provider] = (row, box);
+        }
+    }
+    private void HandleProvider_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_ready || sender is not CheckBox { Tag: string provider } box) return;
+        _preferences.HandleBars = _preferences.HandleBars.Where(k => !k.StartsWith(provider + ":"))
+            .Concat(box.IsChecked == true ? Preferences.HandleKeys.Where(k => k.StartsWith(provider + ":")) : []).ToList();
+        _changed();
+    }
+    private void UpdateExtraHandleRows()
+    {
+        bool parallel = _preferences.HandleMode == "Parallel";
+        foreach (var (barKey, (row, _, _)) in _extraHandleRows)
+            row.Visibility = !parallel && _preferences.IsShown(barKey[..barKey.IndexOf(':')]) ? Visibility.Visible : Visibility.Collapsed;
+        foreach (var row in new FrameworkElement[] { Codex5Row, Codex7Row, Claude5Row, Claude7Row })
+            row.Visibility = parallel ? Visibility.Collapsed : Visibility.Visible;
+        foreach (var (provider, (row, _)) in _providerHandleRows)
+            row.Visibility = parallel && (provider is "Codex" or "Claude" || _preferences.IsShown(provider)) ? Visibility.Visible : Visibility.Collapsed;
     }
     private void TogglePanel_Click(object sender, RoutedEventArgs e) => _togglePanel();
     private void PanelSize_Changed(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
@@ -215,64 +294,193 @@ public sealed partial class SettingsWindow : Window
         _preferences.TaskbarTextSize = TaskbarTextSlider.Value;
         _changed();
     }
-    // Providers read with an API key from a user environment variable: (key, label, variable).
-    private static readonly (string Key, string Label, string Variable)[] ExperimentalProviders =
+    // Every provider with its on/off toggle. Variable: null = nothing to set up, "" = reuses its own CLI/editor sign-in,
+    // otherwise the environment variable that can supply an API key. Only the pay-per-use balances are still experimental.
+    private static readonly (string Key, string Label, string? Variable, bool Experimental)[] ExperimentalProviders =
     [
-        ("DeepSeek", "DeepSeek balance", "DEEPSEEK_API_KEY"), ("Kimi", "Kimi balance", "MOONSHOT_API_KEY")
+        ("Codex", "Codex", null, false), ("Claude", "Claude", null, false),
+        ("Grok", "Grok", "", false), ("Copilot", "GitHub Copilot", "", false),
+        ("DeepSeek", "DeepSeek", "DEEPSEEK_API_KEY", true), ("Kimi", "Kimi", "MOONSHOT_API_KEY", true)
     ];
+    // An empty variable means the provider reuses its own CLI/editor sign-in and needs no key.
+    private static bool SignInFound(string key) => key == "Grok"
+        ? File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".grok", "auth.json"))
+        : Usage.CopilotSignIn.HasToken || File.Exists(Path.Combine(Usage.BalanceProviders.CopilotFolder, "apps.json")) || File.Exists(Path.Combine(Usage.BalanceProviders.CopilotFolder, "hosts.json"));
+    // Grok has no in-app login: open a terminal running the CLI's own, and wait for it to write its auth file.
+    private async Task SignInGrokAsync()
+    {
+        var started = DateTime.UtcNow;
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe", "/k grok login") { UseShellExecute = true }); }
+        catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException) { return; }
+        // The file may already exist with an expired token: wait until the CLI rewrites it.
+        string auth = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".grok", "auth.json");
+        for (int i = 0; i < 100 && !(File.Exists(auth) && File.GetLastWriteTimeUtc(auth) > started); i++) await Task.Delay(3000);
+    }
+    private async Task SignInCopilotAsync()
+    {
+        var cancel = new CancellationTokenSource(); // not disposed: the dialog's Closed event can still fire after this method returns
+        var challenge = await Usage.CopilotSignIn.StartAsync(cancel.Token);
+        if (challenge is null) { await ShowMessageAsync("Could not reach GitHub. Check your connection and try again."); return; }
+        var data = new Windows.ApplicationModel.DataTransfer.DataPackage();
+        data.SetText(challenge.UserCode);
+        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(data);
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(challenge.VerificationUri) { UseShellExecute = true }); }
+        catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException) { }
+        var body = new StackPanel { Spacing = 8 };
+        body.Children.Add(new TextBlock { Text = Loc.T("Enter this code at ") + challenge.VerificationUri + Loc.T(" (copied to the clipboard). Waiting for you to approve…"), TextWrapping = TextWrapping.Wrap });
+        body.Children.Add(new TextBlock { Text = challenge.UserCode, FontSize = 28, FontFamily = new FontFamily("Consolas"), IsTextSelectionEnabled = true });
+        var dialog = new ContentDialog { Title = Loc.T("Sign in to GitHub Copilot"), Content = body, CloseButtonText = Loc.T("Cancel"), XamlRoot = Root.XamlRoot };
+        dialog.Closed += (_, _) => cancel.Cancel();
+        _ = dialog.ShowAsync();
+        bool ok = false;
+        try { ok = await Usage.CopilotSignIn.WaitAsync(challenge, cancel.Token); }
+        catch (OperationCanceledException) { }
+        dialog.Hide();
+        if (!ok && !cancel.IsCancellationRequested) await ShowMessageAsync("Sign-in did not complete. Try again.");
+    }
+    // Kimi Code device login: pick the account region, approve in the browser, wait for the token.
+    private async Task SignInKimiAsync()
+    {
+        var picker = new ContentDialog
+        {
+            Title = Loc.T("Sign in to Kimi Code"), Content = new TextBlock { Text = Loc.T("Which Kimi site is your account on?"), TextWrapping = TextWrapping.Wrap },
+            PrimaryButtonText = Usage.KimiSignIn.China.Name, SecondaryButtonText = Usage.KimiSignIn.Global.Name, CloseButtonText = Loc.T("Cancel"), XamlRoot = Root.XamlRoot
+        };
+        var choice = await picker.ShowAsync();
+        if (choice == ContentDialogResult.None) return;
+        var cancel = new CancellationTokenSource(); // not disposed: the dialog's Closed event can still fire after this method returns
+        var challenge = await Usage.KimiSignIn.StartAsync(choice == ContentDialogResult.Primary ? Usage.KimiSignIn.China : Usage.KimiSignIn.Global, cancel.Token);
+        if (challenge is null) { await ShowMessageAsync("Could not reach Kimi. Check your connection and try again."); return; }
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(challenge.VerificationUri) { UseShellExecute = true }); }
+        catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException) { }
+        var body = new StackPanel { Spacing = 8 };
+        body.Children.Add(new TextBlock { Text = Loc.T("Approve the sign-in in your browser. If asked for a code, enter:"), TextWrapping = TextWrapping.Wrap });
+        body.Children.Add(new TextBlock { Text = challenge.UserCode, FontSize = 28, FontFamily = new FontFamily("Consolas"), IsTextSelectionEnabled = true });
+        var dialog = new ContentDialog { Title = Loc.T("Sign in to Kimi Code"), Content = body, CloseButtonText = Loc.T("Cancel"), XamlRoot = Root.XamlRoot };
+        dialog.Closed += (_, _) => cancel.Cancel();
+        _ = dialog.ShowAsync();
+        bool ok = false;
+        try { ok = await Usage.KimiSignIn.WaitAsync(challenge, cancel.Token); }
+        catch (OperationCanceledException) { }
+        dialog.Hide();
+        if (!ok && !cancel.IsCancellationRequested) await ShowMessageAsync("Sign-in did not complete. Try again.");
+    }
+    private async Task ShowMessageAsync(string message) =>
+        await new ContentDialog { Content = new TextBlock { Text = Loc.T(message), TextWrapping = TextWrapping.Wrap }, CloseButtonText = Loc.T("OK"), XamlRoot = Root.XamlRoot }.ShowAsync();
     private readonly Dictionary<string, ToggleSwitch> _experimentalToggles = [];
     private void BuildExperimental()
     {
-        foreach (var (key, label, variable) in ExperimentalProviders)
+        foreach (var (key, label, variable, experimental) in ExperimentalProviders)
         {
-            bool found = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(variable));
-            string command = $"setx {variable} \"paste-your-key-here\"";
-            var copyIcon = new FontIcon { Glyph = "\uE8C8", FontSize = 12 };
-            var copy = new Button { Content = copyIcon, Padding = new Thickness(6, 3, 6, 3), VerticalAlignment = VerticalAlignment.Center };
-            ToolTipService.SetToolTip(copy, Loc.T("Copy command"));
-            copy.Click += (_, _) =>
-            {
-                var data = new Windows.ApplicationModel.DataTransfer.DataPackage();
-                data.SetText(command);
-                Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(data);
-                copyIcon.Glyph = "\uE73E"; // check mark, restored shortly
-                var timer = DispatcherQueue.CreateTimer();
-                timer.Interval = TimeSpan.FromSeconds(1.5);
-                timer.IsRepeating = false;
-                timer.Tick += (_, _) => copyIcon.Glyph = "\uE8C8";
-                timer.Start();
-            };
             var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Spacing = 2, Margin = new Thickness(0, 6, 12, 6) };
-            text.Children.Add(new TextBlock { Text = label });
-            text.Children.Add(new TextBlock
+            var name = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            name.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center });
+            if (experimental)
+                name.Children.Add((Border)Microsoft.UI.Xaml.Markup.XamlReader.Load(
+                    "<Border xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" CornerRadius=\"4\" Padding=\"6,1,6,1\" BorderThickness=\"1\" VerticalAlignment=\"Center\" BorderBrush=\"{ThemeResource ControlStrokeColorDefaultBrush}\">"
+                    + $"<TextBlock Text=\"{Loc.T("Experimental")}\" FontSize=\"11\" Opacity=\"0.72\" /></Border>"));
+            text.Children.Add(name);
+            if (variable is null) { AddExperimentalRow(text, key); continue; }
+            bool signIn = variable.Length == 0;
+            bool found = signIn ? SignInFound(key) : !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(variable));
+            if (signIn)
             {
-                Text = found ? "API key detected. To replace it, run in a terminal, then restart UsageMon:" : "Run once in a terminal, then restart UsageMon:",
-                Style = (Style)Root.Resources["Caption"]
-            });
-            var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-            line.Children.Add(new TextBlock
+                var status = new TextBlock { Style = (Style)Root.Resources["Caption"], TextWrapping = TextWrapping.Wrap };
+                var button = new Button { Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 4, 0, 0) };
+                void Refresh()
+                {
+                    bool now = SignInFound(key);
+                    status.Text = Loc.T(key == "Grok"
+                        ? (now ? "Grok sign-in detected. Uses its saved login; no key needed." : "Not signed in. Sign in with the Grok CLI (opens a terminal).")
+                        : (now ? "GitHub Copilot sign-in detected. Uses its saved login; no key needed." : "Not signed in. Sign in with GitHub (device code), or sign in to Copilot in VS Code."));
+                    button.Content = Loc.T(now ? "Sign in again" : "Sign in");
+                }
+                Refresh();
+                button.Click += async (_, _) =>
+                {
+                    button.IsEnabled = false;
+                    try { if (key == "Grok") await SignInGrokAsync(); else await SignInCopilotAsync(); }
+                    finally { button.IsEnabled = true; Refresh(); if (SignInFound(key) && _preferences.IsShown(key)) RefreshUsageRequested?.Invoke(); }
+                };
+                text.Children.Add(status);
+                text.Children.Add(button);
+                AddExperimentalRow(text, key);
+                continue;
+            }
+            // API-key providers: paste the key here (stored DPAPI-protected, readable only by this Windows user); the environment variable still works.
+            string secret = key == "DeepSeek" ? "deepseek-key" : "moonshot-key";
+            var keyStatus = new TextBlock { Style = (Style)Root.Resources["Caption"], TextWrapping = TextWrapping.Wrap };
+            var keyBox = new PasswordBox { PlaceholderText = Loc.T("Paste API key"), Width = 230, VerticalAlignment = VerticalAlignment.Center };
+            var save = new Button { Content = Loc.T("Save"), Padding = new Thickness(10, 3, 10, 3) };
+            var remove = new Button { Content = Loc.T("Remove"), Padding = new Thickness(10, 3, 10, 3) };
+            var kimiStatus = new TextBlock { Style = (Style)Root.Resources["Caption"], TextWrapping = TextWrapping.Wrap };
+            var kimiButton = new Button { Padding = new Thickness(10, 3, 10, 3) };
+            var kimiOut = new Button { Content = Loc.T("Sign out"), Padding = new Thickness(10, 3, 10, 3) };
+            void RefreshKey()
             {
-                Text = command, IsTextSelectionEnabled = true, FontFamily = new FontFamily("Consolas"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center,
-                TextWrapping = TextWrapping.NoWrap
-            });
-            line.Children.Add(copy);
-            text.Children.Add(line);
-            var toggle = new ToggleSwitch { OnContent = "", OffContent = "", MinWidth = 0, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center, Tag = key };
-            toggle.Toggled += Experimental_Changed;
-            _experimentalToggles[key] = toggle;
-            var row = new Grid { Style = (Style)Root.Resources["Row"] };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            row.Children.Add(text);
-            Grid.SetColumn(toggle, 1);
-            row.Children.Add(toggle);
-            ExperimentalCard.Children.Add(row);
+                bool stored = Usage.SecretStore.Has(secret);
+                keyStatus.Text = Loc.T(stored ? "API key saved. Paste a new one to replace it."
+                    : found ? "Using the API key from the environment variable. Paste one here to override it." : "Paste your API key to show the balance.");
+                remove.Visibility = stored ? Visibility.Visible : Visibility.Collapsed;
+                if (key != "Kimi") return;
+                bool login = Usage.KimiSignIn.HasLogin;
+                kimiStatus.Text = Loc.T(login ? "Signed in to Kimi Code: the plan's 5h and weekly quota are added." : "Optional: sign in with your browser to add the Kimi Code plan quota.");
+                kimiButton.Content = Loc.T(login ? "Sign in again" : "Sign in with browser");
+                kimiOut.Visibility = login ? Visibility.Visible : Visibility.Collapsed;
+            }
+            void Changed() { RefreshKey(); if (_preferences.IsShown(key)) RefreshUsageRequested?.Invoke(); }
+            save.Click += (_, _) =>
+            {
+                if (string.IsNullOrWhiteSpace(keyBox.Password)) return;
+                Usage.SecretStore.Save(secret, keyBox.Password.Trim());
+                keyBox.Password = "";
+                Changed();
+            };
+            remove.Click += (_, _) => { Usage.SecretStore.Delete(secret); Changed(); };
+            kimiOut.Click += (_, _) => { Usage.KimiSignIn.SignOut(); Changed(); };
+            kimiButton.Click += async (_, _) =>
+            {
+                kimiButton.IsEnabled = false;
+                try { await SignInKimiAsync(); }
+                finally { kimiButton.IsEnabled = true; Changed(); }
+            };
+            text.Children.Add(keyStatus);
+            var keyLine = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            keyLine.Children.Add(keyBox);
+            keyLine.Children.Add(save);
+            keyLine.Children.Add(remove);
+            text.Children.Add(keyLine);
+            if (key == "Kimi")
+            {
+                kimiStatus.Margin = new Thickness(0, 6, 0, 0);
+                text.Children.Add(kimiStatus);
+                var kimiLine = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                kimiLine.Children.Add(kimiButton);
+                kimiLine.Children.Add(kimiOut);
+                text.Children.Add(kimiLine);
+            }
+            RefreshKey();
+            AddExperimentalRow(text, key);
         }
+    }
+    private void AddExperimentalRow(StackPanel text, string key)
+    {
+        var toggle = new ToggleSwitch { OnContent = "", OffContent = "", MinWidth = 0, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center, Tag = key };
+        toggle.Toggled += Experimental_Changed;
+        _experimentalToggles[key] = toggle;
+        var row = new Grid { Style = (Style)Root.Resources["Row"] };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.Children.Add(text);
+        Grid.SetColumn(toggle, 1);
+        row.Children.Add(toggle);
+        ExperimentalCard.Children.Add(row);
     }
     private void Experimental_Changed(object sender, RoutedEventArgs e)
     {
         if (!_ready) return;
         foreach (var (key, toggle) in _experimentalToggles) _preferences.SetShown(key, toggle.IsOn);
+        SyncExperimentalControls();
         _changed();
         if (ExperimentalProviders.Any(p => _preferences.IsShown(p.Key))) RefreshUsageRequested?.Invoke();
     }
@@ -316,7 +524,8 @@ public sealed partial class SettingsWindow : Window
     private IEnumerable<(CheckBox Box, Border Swatch, string Key)> HandleControls() =>
     [
         (Codex5Check, Codex5Swatch, "Codex:5h"), (Codex7Check, Codex7Swatch, "Codex:7d"),
-        (Claude5Check, Claude5Swatch, "Claude:5h"), (Claude7Check, Claude7Swatch, "Claude:7d")
+        (Claude5Check, Claude5Swatch, "Claude:5h"), (Claude7Check, Claude7Swatch, "Claude:7d"),
+        .. _extraHandleRows.Select(r => (r.Value.Box, r.Value.Swatch, r.Key))
     ];
     private static Windows.UI.Color ParseColor(string hex) => Windows.UI.Color.FromArgb(255,
         Convert.ToByte(hex.Substring(1, 2), 16), Convert.ToByte(hex.Substring(3, 2), 16), Convert.ToByte(hex.Substring(5, 2), 16));
@@ -332,7 +541,8 @@ public sealed partial class SettingsWindow : Window
     private void Handle_Selection(object sender, SelectionChangedEventArgs e)
     {
         if (!_ready) return;
-        _preferences.HandleMode = HandleModeCombo.SelectedIndex == 1 ? "Combined" : "Stacked";
+        _preferences.HandleMode = HandleModeCombo.SelectedIndex switch { 1 => "Combined", 2 => "Parallel", _ => "Stacked" };
+        UpdateExtraHandleRows();
         _changed();
     }
     private void HandleSize_Changed(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
@@ -356,6 +566,7 @@ public sealed partial class SettingsWindow : Window
             _preferences.HandleColors[key] = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
             var swatch = HandleControls().First(h => h.Key == key).Swatch;
             swatch.Background = new SolidColorBrush(c);
+            foreach (var (swatchKey, other) in _providerSwatches) if (swatchKey == key) other.Background = new SolidColorBrush(c);
             _changed();
         };
         new Flyout { Content = picker }.ShowAt(button);

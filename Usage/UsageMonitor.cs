@@ -15,6 +15,8 @@ public sealed class UsageMonitor : IDisposable
     public UsageSnapshot Claude { get; private set; } = UsageSnapshot.Initial("Claude");
     public BalanceSnapshot DeepSeek { get; private set; } = BalanceSnapshot.Initial("DeepSeek");
     public BalanceSnapshot Kimi { get; private set; } = BalanceSnapshot.Initial("Kimi");
+    public BalanceSnapshot Grok { get; private set; } = BalanceSnapshot.Initial("Grok", "quota");
+    public BalanceSnapshot Copilot { get; private set; } = BalanceSnapshot.Initial("Copilot", "quota");
     // Quota snapshots by provider key, for the displays that treat every provider alike.
     public Dictionary<string, UsageSnapshot> Quotas => new() { ["Codex"] = Codex, ["Claude"] = Claude };
     private readonly BalanceProviders _balances = new();
@@ -45,6 +47,9 @@ public sealed class UsageMonitor : IDisposable
             Claude = Merge(Claude, await claude);
             if (_preferences.ShowDeepSeek) DeepSeek = KeepLastGood(DeepSeek, await SafeBalance("DeepSeek", () => _balances.DeepSeekAsync(_stop.Token)));
             if (_preferences.ShowKimi) Kimi = KeepLastGood(Kimi, await SafeBalance("Kimi", () => _balances.KimiAsync(_stop.Token)));
+            if (_preferences.ShowGrok) Grok = KeepLastGood(Grok, await SafeBalance("Grok", () => _balances.GrokAsync(_stop.Token), "quota"));
+            if (_preferences.ShowCopilot) Copilot = KeepLastGood(Copilot, await SafeBalance("Copilot", () => _balances.CopilotAsync(_stop.Token), "quota"));
+            if (Environment.GetEnvironmentVariable("USAGEMON_TRACE") == "1") File.AppendAllText(Path.Combine(Path.GetTempPath(), "usagemon-balances.log"), $"{DateTime.Now:T} DeepSeek={DeepSeek.State}/{DeepSeek.Message} Kimi={Kimi.State}/{Kimi.Message} Grok={Grok.State}/{Grok.Amount}/{Grok.Message} Copilot={Copilot.State}/{Copilot.Amount}/{Copilot.Message}{Environment.NewLine}");
             SaveCache();
             Updated?.Invoke();
         }
@@ -57,14 +62,14 @@ public sealed class UsageMonitor : IDisposable
         catch (OperationCanceledException) { throw; }
         catch (Exception) { return new(provider, UsageState.Unavailable, [], null, "Usage unavailable · check settings", ""); }
     }
-    private static async Task<BalanceSnapshot> SafeBalance(string provider, Func<Task<BalanceSnapshot>> read)
+    private static async Task<BalanceSnapshot> SafeBalance(string provider, Func<Task<BalanceSnapshot>> read, string noun = "balance")
     {
         try { return await read(); }
         catch (OperationCanceledException) { throw; }
-        catch (Exception) { return BalanceSnapshot.Failure(provider, "Balance unavailable"); }
+        catch (Exception) { return BalanceSnapshot.Failure(provider, noun == "quota" ? "Quota unavailable" : "Balance unavailable", noun: noun); }
     }
     private static BalanceSnapshot KeepLastGood(BalanceSnapshot previous, BalanceSnapshot next) =>
-        next.State != UsageState.Live && previous.Amount.Length > 0 && previous.State is UsageState.Live or UsageState.Stale
+        next.State != UsageState.Live && previous.Amount.Length > 0 && (previous.State == UsageState.Live || previous.State == UsageState.Stale)
             ? previous with { State = UsageState.Stale, Message = next.Message } : next;
     internal static UsageSnapshot Merge(UsageSnapshot previous, UsageSnapshot next)
     {
