@@ -1,8 +1,11 @@
 # UsageMon · 用量悬浮窗
 
+<p align="center"><img src="docs/banner.png" alt="UsageMon: your AI coding quotas, always in view" width="100%"></p>
+
 <p align="center"><img src="docs/hero.png" alt="UsageMon panel and usage tooltip" width="360"></p>
 
 [![Downloads](https://img.shields.io/github/downloads/nathanatgit/UsageMon/total?label=downloads&color=0067c0)](https://github.com/nathanatgit/UsageMon/releases)
+[![Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-Get%20it-0067c0?logo=microsoft&logoColor=white)](https://apps.microsoft.com/detail/9N46FDXP5FWT)
 [![Latest release](https://img.shields.io/github/v/release/nathanatgit/UsageMon?color=0067c0)](https://github.com/nathanatgit/UsageMon/releases/latest)
 
 Just another simple floating/taskbar monitor, that's all of it.
@@ -17,7 +20,9 @@ Simple and native, no expensive settings and fancy UIs. Minimal and clean, click
 
 ## Download
 
-Get the latest build from [Releases](https://github.com/nathanatgit/UsageMon/releases/latest), picking x64, x86 or arm64 to match your PC.
+**Microsoft Store (recommended, auto-updates):** [get UsageMon from the Microsoft Store](https://apps.microsoft.com/detail/9N46FDXP5FWT). 也可在微软商店搜索 “UsageMon”。
+
+Or get the latest build from [Releases](https://github.com/nathanatgit/UsageMon/releases/latest), picking x64, x86 or arm64 to match your PC.
 
 | Build | Files | Needs |
 |---|---|---|
