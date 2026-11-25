@@ -24,6 +24,8 @@
             <Viewbox x:Name="KimiBox"><controls:BalanceBadge x:Name="KimiReadout" /></Viewbox>
             <Viewbox x:Name="GrokBox"><controls:BalanceBadge x:Name="GrokReadout" /></Viewbox>
             <Viewbox x:Name="CopilotBox"><controls:BalanceBadge x:Name="CopilotReadout" /></Viewbox>
+            <Viewbox x:Name="GeminiBox"><controls:BalanceBadge x:Name="GeminiReadout" /></Viewbox>
+            <Viewbox x:Name="AntigravityBox"><controls:BalanceBadge x:Name="AntigravityReadout" /></Viewbox>
         </StackPanel>
     </Grid>
 </Window>

@@ -92,6 +92,8 @@
                         <StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,0,16,0">
                             <TextBlock x:Name="CodexStatusText" Text="Codex · checking…" Style="{StaticResource Caption}" />
                             <TextBlock x:Name="ClaudeStatusText" Text="Claude · checking…" Style="{StaticResource Caption}" />
+                            <TextBlock x:Name="GeminiStatusText" Visibility="Collapsed" Style="{StaticResource Caption}" />
+                            <TextBlock x:Name="AntigravityStatusText" Visibility="Collapsed" Style="{StaticResource Caption}" />
                             <TextBlock x:Name="GrokStatusText" Visibility="Collapsed" Style="{StaticResource Caption}" />
                             <TextBlock x:Name="CopilotStatusText" Visibility="Collapsed" Style="{StaticResource Caption}" />
                             <TextBlock x:Name="KimiStatusText" Visibility="Collapsed" Style="{StaticResource Caption}" />

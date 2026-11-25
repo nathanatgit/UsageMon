@@ -13,7 +13,7 @@ public sealed class Preferences
     public bool ShowClaude { get; set; } = true;
     public bool ClaudeFirst { get; set; } // legacy; migrated into Order on load
     public List<string> Order { get; set; } = [.. AllProviders];
-    public static readonly string[] AllProviders = ["Codex", "Claude", "DeepSeek", "Kimi", "Grok", "Copilot"];
+    public static readonly string[] AllProviders = ["Codex", "Claude", "DeepSeek", "Kimi", "Grok", "Copilot", "Gemini", "Antigravity"];
     public void SetShown(string key, bool value)
     {
         switch (key)
@@ -24,11 +24,14 @@ public sealed class Preferences
             case "Kimi": ShowKimi = value; break;
             case "Grok": ShowGrok = value; break;
             case "Copilot": ShowCopilot = value; break;
+            case "Gemini": ShowGemini = value; break;
+            case "Antigravity": ShowAntigravity = value; break;
         }
     }
     public bool IsShown(string key) => key switch
     {
-        "Codex" => ShowCodex, "Claude" => ShowClaude, "DeepSeek" => ShowDeepSeek, "Kimi" => ShowKimi, "Grok" => ShowGrok, "Copilot" => ShowCopilot, _ => false
+        "Codex" => ShowCodex, "Claude" => ShowClaude, "DeepSeek" => ShowDeepSeek, "Kimi" => ShowKimi,
+        "Grok" => ShowGrok, "Copilot" => ShowCopilot, "Gemini" => ShowGemini, "Antigravity" => ShowAntigravity, _ => false
     };
     // Every provider exactly once, in the saved order.
     public List<string> NormalizedOrder()
@@ -47,9 +50,22 @@ public sealed class Preferences
         Order = order;
     }
     // Auto-hide handle: which quota windows it shows ("Provider:window"), their colours, and how they are arranged.
-    public static readonly string[] HandleKeys = ["Codex:5h", "Codex:7d", "Claude:5h", "Claude:7d", "Kimi:5h", "Kimi:weekly", "Grok:used", "Copilot:premium", "Copilot:chat", "Copilot:completions"];
+    public static readonly string[] HandleKeys =
+    [
+        "Codex:5h", "Codex:7d", "Claude:5h", "Claude:7d",
+        "Gemini:pro", "Gemini:flash", "Gemini:flash-lite",
+        "Antigravity:gemini-5h", "Antigravity:gemini-weekly", "Antigravity:gemini-argon", "Antigravity:3p-5h", "Antigravity:3p-weekly",
+        "Kimi:5h", "Kimi:weekly", "Grok:used", "Copilot:premium", "Copilot:chat", "Copilot:completions"
+    ];
     public static readonly Dictionary<string, string> DefaultHandleColors = new()
-    { ["Codex:5h"] = "#3B82F6", ["Codex:7d"] = "#8B5CF6", ["Claude:5h"] = "#D97757", ["Claude:7d"] = "#E0A458", ["Kimi:5h"] = "#3B82F6", ["Kimi:weekly"] = "#60A5FA", ["Grok:used"] = "#9CA3AF", ["Copilot:premium"] = "#16A34A", ["Copilot:chat"] = "#22C55E", ["Copilot:completions"] = "#86EFAC" };
+    {
+        ["Codex:5h"] = "#3B82F6", ["Codex:7d"] = "#8B5CF6", ["Claude:5h"] = "#D97757", ["Claude:7d"] = "#E0A458",
+        ["Gemini:pro"] = "#4285F4", ["Gemini:flash"] = "#34A853", ["Gemini:flash-lite"] = "#FBBC04",
+        ["Antigravity:gemini-5h"] = "#4285F4", ["Antigravity:gemini-weekly"] = "#34A853", ["Antigravity:gemini-argon"] = "#A855F7",
+        ["Antigravity:3p-5h"] = "#EA4335", ["Antigravity:3p-weekly"] = "#FBBC04",
+        ["Kimi:5h"] = "#3B82F6", ["Kimi:weekly"] = "#60A5FA", ["Grok:used"] = "#9CA3AF",
+        ["Copilot:premium"] = "#16A34A", ["Copilot:chat"] = "#22C55E", ["Copilot:completions"] = "#86EFAC"
+    };
     public List<string> HandleBars { get; set; } = ["Codex:5h", "Claude:5h"];
     public Dictionary<string, string> HandleColors { get; set; } = [];
     public string HandleMode { get; set; } = "Stacked"; // Stacked: bars side by side (thicker); Combined: end to end (longer); Parallel: side by side within a provider, end to end between providers
@@ -64,6 +80,8 @@ public sealed class Preferences
     public bool ShowKimi { get; set; }
     public bool ShowGrok { get; set; }
     public bool ShowCopilot { get; set; }
+    public bool ShowGemini { get; set; }
+    public bool ShowAntigravity { get; set; }
     public string Theme { get; set; } = "System";
     [JsonIgnore] public ElementTheme ThemeValue => Theme switch { "Light" => ElementTheme.Light, "Dark" => ElementTheme.Dark, _ => ElementTheme.Default };
     public bool Sticky { get; set; } = true;

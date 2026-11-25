@@ -17,6 +17,8 @@ public sealed class UsageMonitor : IDisposable
     public BalanceSnapshot Kimi { get; private set; } = BalanceSnapshot.Initial("Kimi");
     public BalanceSnapshot Grok { get; private set; } = BalanceSnapshot.Initial("Grok", "quota");
     public BalanceSnapshot Copilot { get; private set; } = BalanceSnapshot.Initial("Copilot", "quota");
+    public BalanceSnapshot Gemini { get; private set; } = BalanceSnapshot.Initial("Gemini", "quota");
+    public BalanceSnapshot Antigravity { get; private set; } = BalanceSnapshot.Initial("Antigravity", "quota");
     // Quota snapshots by provider key, for the displays that treat every provider alike.
     public Dictionary<string, UsageSnapshot> Quotas => new() { ["Codex"] = Codex, ["Claude"] = Claude };
     private readonly BalanceProviders _balances = new();
@@ -49,7 +51,9 @@ public sealed class UsageMonitor : IDisposable
             if (_preferences.ShowKimi) Kimi = KeepLastGood(Kimi, await SafeBalance("Kimi", () => _balances.KimiAsync(_stop.Token)));
             if (_preferences.ShowGrok) Grok = KeepLastGood(Grok, await SafeBalance("Grok", () => _balances.GrokAsync(_stop.Token), "quota"));
             if (_preferences.ShowCopilot) Copilot = KeepLastGood(Copilot, await SafeBalance("Copilot", () => _balances.CopilotAsync(_stop.Token), "quota"));
-            if (Environment.GetEnvironmentVariable("USAGEMON_TRACE") == "1") File.AppendAllText(Path.Combine(Path.GetTempPath(), "usagemon-balances.log"), $"{DateTime.Now:T} DeepSeek={DeepSeek.State}/{DeepSeek.Message} Kimi={Kimi.State}/{Kimi.Message} Grok={Grok.State}/{Grok.Amount}/{Grok.Message} Copilot={Copilot.State}/{Copilot.Amount}/{Copilot.Message}{Environment.NewLine}");
+            if (_preferences.ShowGemini) Gemini = KeepLastGood(Gemini, await SafeBalance("Gemini", () => _balances.GeminiAsync(_stop.Token), "quota"));
+            if (_preferences.ShowAntigravity) Antigravity = KeepLastGood(Antigravity, await SafeBalance("Antigravity", () => _balances.AntigravityAsync(_stop.Token), "quota"));
+            if (Environment.GetEnvironmentVariable("USAGEMON_TRACE") == "1") File.AppendAllText(Path.Combine(Path.GetTempPath(), "usagemon-balances.log"), $"{DateTime.Now:T} DeepSeek={DeepSeek.State}/{DeepSeek.Message} Kimi={Kimi.State}/{Kimi.Message} Grok={Grok.State}/{Grok.Amount}/{Grok.Message} Copilot={Copilot.State}/{Copilot.Amount}/{Copilot.Message} Gemini={Gemini.State}/{Gemini.Amount}/{Gemini.Message} Antigravity={Antigravity.State}/{Antigravity.Amount}/{Antigravity.Message}{Environment.NewLine}");
             SaveCache();
             Updated?.Invoke();
         }

@@ -171,7 +171,7 @@ public sealed partial class FloatingWindow : Window
     { ["Codex"] = CodexReadout, ["Claude"] = ClaudeReadout };
     private Dictionary<string, FrameworkElement>? _badges;
     private Dictionary<string, FrameworkElement> Badges => _badges ??= new(QuotaBadges.ToDictionary(p => p.Key, p => (FrameworkElement)p.Value))
-    { ["DeepSeek"] = DeepSeekReadout, ["Kimi"] = KimiReadout, ["Grok"] = GrokReadout, ["Copilot"] = CopilotReadout };
+    { ["DeepSeek"] = DeepSeekReadout, ["Kimi"] = KimiReadout, ["Grok"] = GrokReadout, ["Copilot"] = CopilotReadout, ["Gemini"] = GeminiReadout, ["Antigravity"] = AntigravityReadout };
 
     public void ApplyPreferences()
     {
@@ -189,8 +189,8 @@ public sealed partial class FloatingWindow : Window
             bool joined = Kind == PanelKind.Joined;
             CodexReadout.Visibility = Kind != PanelKind.Claude && _preferences.ShowCodex && !(joined && _preferences.SeparatePanels) ? Visibility.Visible : Visibility.Collapsed;
             ClaudeReadout.Visibility = Kind != PanelKind.Codex && _preferences.ShowClaude && !(joined && _preferences.SeparatePanels) ? Visibility.Visible : Visibility.Collapsed;
-            // DeepSeek, Kimi, Grok and Copilot only appear in the joined panel.
-            foreach (var extra in new[] { "DeepSeek", "Kimi", "Grok", "Copilot" })
+            // DeepSeek, Kimi, Grok, Copilot, Gemini and Antigravity only appear in the joined panel.
+            foreach (var extra in new[] { "DeepSeek", "Kimi", "Grok", "Copilot", "Gemini", "Antigravity" })
                 Badges[extra].Visibility = joined && _preferences.IsShown(extra) ? Visibility.Visible : Visibility.Collapsed;
             Panel.Orientation = _preferences.Vertical ? Microsoft.UI.Xaml.Controls.Orientation.Vertical : Microsoft.UI.Xaml.Controls.Orientation.Horizontal;
             Panel.Children.Clear();
@@ -514,7 +514,7 @@ public sealed partial class FloatingWindow : Window
     {
         Surface.RequestedTheme = _preferences.ThemeValue;
         foreach (var badge in QuotaBadges.Values) badge.SetTheme(_preferences.ThemeValue);
-        foreach (var badge in new[] { DeepSeekReadout, KimiReadout, GrokReadout, CopilotReadout }) badge.SetTheme(_preferences.ThemeValue);
+        foreach (var badge in new[] { DeepSeekReadout, KimiReadout, GrokReadout, CopilotReadout, GeminiReadout, AntigravityReadout }) badge.SetTheme(_preferences.ThemeValue);
         _backdrop.Configure(_preferences);
         _edgeBackdrop.Configure(_preferences);
         _featherBackdrop.Configure(_preferences);
@@ -595,15 +595,19 @@ public sealed partial class FloatingWindow : Window
     private void OnTop_Click(object sender, RoutedEventArgs e) { _preferences.AlwaysOnTop = !_preferences.AlwaysOnTop; ChangePreferences(); }
     private void Settings_Click(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke();
     private void RefreshUsage_Click(object sender, RoutedEventArgs e) => RefreshUsageRequested?.Invoke();
-    public void UpdateBalances(Usage.BalanceSnapshot deepSeek, Usage.BalanceSnapshot kimi, Usage.BalanceSnapshot grok, Usage.BalanceSnapshot copilot)
+    public void UpdateBalances(Usage.BalanceSnapshot deepSeek, Usage.BalanceSnapshot kimi, Usage.BalanceSnapshot grok, Usage.BalanceSnapshot copilot, Usage.BalanceSnapshot gemini, Usage.BalanceSnapshot antigravity)
     {
         DeepSeekReadout.Update(deepSeek);
         KimiReadout.Update(kimi);
         GrokReadout.Update(grok);
         CopilotReadout.Update(copilot);
+        GeminiReadout.Update(gemini);
+        AntigravityReadout.Update(antigravity);
         _balanceSnapshots["Kimi"] = kimi;
         _balanceSnapshots["Grok"] = grok;
         _balanceSnapshots["Copilot"] = copilot;
+        _balanceSnapshots["Gemini"] = gemini;
+        _balanceSnapshots["Antigravity"] = antigravity;
         RefreshHandle();
     }
     public void UpdateUsage(Dictionary<string, Usage.UsageSnapshot> quotas)

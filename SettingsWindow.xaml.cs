@@ -164,6 +164,10 @@ public sealed partial class SettingsWindow : Window
     // One handle row per reading these providers can report.
     private static readonly (string Key, string Label)[] ExtraHandleBars =
     [
+        ("Gemini:pro", "Gemini Pro"), ("Gemini:flash", "Gemini Flash"), ("Gemini:flash-lite", "Gemini Flash Lite"),
+        ("Antigravity:gemini-5h", "Antigravity Gemini 5h"), ("Antigravity:gemini-weekly", "Antigravity Gemini weekly"),
+        ("Antigravity:gemini-argon", "Antigravity Gemini Argon"), ("Antigravity:3p-5h", "Antigravity Claude / GPT 5h"),
+        ("Antigravity:3p-weekly", "Antigravity Claude / GPT weekly"),
         ("Kimi:5h", "Kimi 5h"), ("Kimi:weekly", "Kimi weekly"), ("Grok:used", "Grok"),
         ("Copilot:premium", "Copilot premium"), ("Copilot:chat", "Copilot chat"), ("Copilot:completions", "Copilot completions")
     ];
@@ -192,14 +196,16 @@ public sealed partial class SettingsWindow : Window
     private void BuildProviderHandleRows()
     {
         int index = 0;
-        foreach (string provider in new[] { "Codex", "Claude", "Kimi", "Grok", "Copilot" })
+        foreach (string provider in new[] { "Codex", "Claude", "Gemini", "Antigravity", "Kimi", "Grok", "Copilot" })
         {
             var box = new CheckBox { Content = provider, Tag = provider, MinWidth = 0 };
             box.Click += HandleProvider_Changed;
+            var keys = Preferences.HandleKeys.Where(k => k.StartsWith(provider + ":")).ToArray();
+            double swatchWidth = keys.Length > 3 ? 28 : 44;
             var colors = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, HorizontalAlignment = HorizontalAlignment.Right };
-            foreach (string key in Preferences.HandleKeys.Where(k => k.StartsWith(provider + ":")))
+            foreach (string key in keys)
             {
-                var swatch = new Border { Width = 44, Height = 16, CornerRadius = new CornerRadius(3) };
+                var swatch = new Border { Width = swatchWidth, Height = 16, CornerRadius = new CornerRadius(3) };
                 var button = new Button { Tag = key, Content = swatch, Padding = new Thickness(4) };
                 Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, key + " colour");
                 button.Click += HandleColor_Click;
@@ -271,11 +277,13 @@ public sealed partial class SettingsWindow : Window
         box.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
         if (shown) box.Text = Status(snapshot);
     }
-    public void UpdateUsage(Usage.UsageSnapshot codex, Usage.UsageSnapshot claude, Usage.BalanceSnapshot grok, Usage.BalanceSnapshot copilot, Usage.BalanceSnapshot kimi, Usage.BalanceSnapshot deepSeek)
+    public void UpdateUsage(Usage.UsageSnapshot codex, Usage.UsageSnapshot claude, Usage.BalanceSnapshot gemini, Usage.BalanceSnapshot antigravity, Usage.BalanceSnapshot grok, Usage.BalanceSnapshot copilot, Usage.BalanceSnapshot kimi, Usage.BalanceSnapshot deepSeek)
     {
         var now = DateTimeOffset.UtcNow;
         CodexStatusText.Text = Status(codex, now);
         ClaudeStatusText.Text = Status(claude, now);
+        ShowStatus(GeminiStatusText, "Gemini", gemini);
+        ShowStatus(AntigravityStatusText, "Antigravity", antigravity);
         ShowStatus(GrokStatusText, "Grok", grok);
         ShowStatus(CopilotStatusText, "Copilot", copilot);
         ShowStatus(KimiStatusText, "Kimi", kimi);
@@ -317,13 +325,43 @@ public sealed partial class SettingsWindow : Window
     private static readonly (string Key, string Label, string? Variable, bool Experimental)[] ExperimentalProviders =
     [
         ("Codex", "Codex", null, false), ("Claude", "Claude", null, false),
+        ("Gemini", "Google Gemini", "", false), ("Antigravity", "Antigravity", "", false),
         ("Grok", "Grok", "", false), ("Copilot", "GitHub Copilot", "", false),
         ("DeepSeek", "DeepSeek", "DEEPSEEK_API_KEY", true), ("Kimi", "Kimi", "MOONSHOT_API_KEY", true)
     ];
     // An empty variable means the provider reuses its own CLI/editor sign-in and needs no key.
-    private static bool SignInFound(string key) => key == "Grok"
-        ? File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".grok", "auth.json"))
-        : Usage.CopilotSignIn.HasToken || File.Exists(Path.Combine(Usage.BalanceProviders.CopilotFolder, "apps.json")) || File.Exists(Path.Combine(Usage.BalanceProviders.CopilotFolder, "hosts.json"));
+    private static bool SignInFound(string key) => key switch
+    {
+        "Grok" => File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".grok", "auth.json")),
+        "Gemini" => Usage.BalanceProviders.HasGeminiSignIn(),
+        "Antigravity" => Usage.BalanceProviders.HasAntigravitySignIn(),
+        _ => Usage.CopilotSignIn.HasToken || File.Exists(Path.Combine(Usage.BalanceProviders.CopilotFolder, "apps.json")) || File.Exists(Path.Combine(Usage.BalanceProviders.CopilotFolder, "hosts.json"))
+    };
+    private async Task SignInGoogleAsync(string title, Usage.GoogleOAuth.ClientConfig config)
+    {
+        var cancel = new CancellationTokenSource(); // not disposed: the dialog's Closed event can still fire after this method returns
+        var dialog = new ContentDialog
+        {
+            Title = Loc.T(title),
+            Content = new TextBlock { Text = Loc.T("Finish signing in to Google in your browser. Waiting for confirmation…"), TextWrapping = TextWrapping.Wrap },
+            CloseButtonText = Loc.T("Cancel"), XamlRoot = Root.XamlRoot
+        };
+        dialog.Closed += (_, _) => cancel.Cancel();
+        _ = dialog.ShowAsync();
+        bool ok = false;
+        try
+        {
+            ok = await Usage.GoogleOAuth.SignInAsync(config, url =>
+            {
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }); }
+                catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException) { }
+            }, cancel.Token);
+        }
+        catch (OperationCanceledException) { }
+        catch (System.Net.Sockets.SocketException) { }
+        dialog.Hide();
+        if (!ok && !cancel.IsCancellationRequested) await ShowMessageAsync("Sign-in did not complete. Try again.");
+    }
     // Grok has no in-app login: open a terminal running the CLI's own, and wait for it to write its auth file.
     private async Task SignInGrokAsync()
     {
@@ -404,24 +442,64 @@ public sealed partial class SettingsWindow : Window
             if (signIn)
             {
                 var status = new TextBlock { Style = (Style)Root.Resources["Caption"], TextWrapping = TextWrapping.Wrap };
-                var button = new Button { Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 4, 0, 0) };
+                var button = new Button { Padding = new Thickness(10, 3, 10, 3) };
+                var signOut = new Button { Content = Loc.T("Sign out"), Padding = new Thickness(10, 3, 10, 3), Visibility = Visibility.Collapsed };
                 void Refresh()
                 {
                     bool now = SignInFound(key);
-                    status.Text = Loc.T(key == "Grok"
-                        ? (now ? "Grok sign-in detected. Uses its saved login; no key needed." : "Not signed in. Sign in with the Grok CLI (opens a terminal).")
-                        : (now ? "GitHub Copilot sign-in detected. Uses its saved login; no key needed." : "Not signed in. Sign in with GitHub (device code), or sign in to Copilot in VS Code."));
-                    button.Content = Loc.T(now ? "Sign in again" : "Sign in");
+                    if (key == "Gemini")
+                    {
+                        bool own = Usage.GoogleOAuth.HasLogin(Usage.GoogleOAuth.GeminiClient);
+                        bool cli = File.Exists(Usage.BalanceProviders.GeminiCredsPath());
+                        status.Text = Loc.T(own ? "Signed in to Google Gemini. Uses UsageMon's saved sign-in."
+                            : cli ? "Gemini CLI sign-in detected. Uses its saved login; no key needed."
+                            : "Not signed in. Sign in with Google, or sign in with the Gemini CLI.");
+                        button.Content = Loc.T(own || cli ? "Sign in again" : "Sign in");
+                        signOut.Visibility = own ? Visibility.Visible : Visibility.Collapsed;
+                    }
+                    else if (key == "Antigravity")
+                    {
+                        bool own = Usage.GoogleOAuth.HasLogin(Usage.GoogleOAuth.AntigravityClient);
+                        bool cli = Usage.BalanceProviders.FindAgyExecutable() is not null;
+                        status.Text = Loc.T(own ? "Signed in to Antigravity. Uses UsageMon's saved sign-in."
+                            : cli ? "Antigravity CLI detected. Sign in with Google for plan details and faster refresh."
+                            : "Not signed in. Sign in with Google, or install the agy CLI.");
+                        button.Content = Loc.T(own ? "Sign in again" : "Sign in");
+                        signOut.Visibility = own ? Visibility.Visible : Visibility.Collapsed;
+                    }
+                    else
+                    {
+                        status.Text = Loc.T(key == "Grok"
+                            ? (now ? "Grok sign-in detected. Uses its saved login; no key needed." : "Not signed in. Sign in with the Grok CLI (opens a terminal).")
+                            : (now ? "GitHub Copilot sign-in detected. Uses its saved login; no key needed." : "Not signed in. Sign in with GitHub (device code), or sign in to Copilot in VS Code."));
+                        button.Content = Loc.T(now ? "Sign in again" : "Sign in");
+                    }
                 }
                 Refresh();
                 button.Click += async (_, _) =>
                 {
                     button.IsEnabled = false;
-                    try { if (key == "Grok") await SignInGrokAsync(); else await SignInCopilotAsync(); }
+                    try
+                    {
+                        if (key == "Grok") await SignInGrokAsync();
+                        else if (key == "Gemini") await SignInGoogleAsync("Sign in to Google Gemini", Usage.GoogleOAuth.GeminiClient);
+                        else if (key == "Antigravity") await SignInGoogleAsync("Sign in to Antigravity", Usage.GoogleOAuth.AntigravityClient);
+                        else await SignInCopilotAsync();
+                    }
                     finally { button.IsEnabled = true; Refresh(); if (SignInFound(key) && _preferences.IsShown(key)) RefreshUsageRequested?.Invoke(); }
                 };
+                signOut.Click += (_, _) =>
+                {
+                    if (key == "Gemini") Usage.GoogleOAuth.SignOut(Usage.GoogleOAuth.GeminiClient);
+                    else if (key == "Antigravity") Usage.GoogleOAuth.SignOut(Usage.GoogleOAuth.AntigravityClient);
+                    Refresh();
+                    if (_preferences.IsShown(key)) RefreshUsageRequested?.Invoke();
+                };
                 text.Children.Add(status);
-                text.Children.Add(button);
+                var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 4, 0, 0) };
+                buttons.Children.Add(button);
+                buttons.Children.Add(signOut);
+                text.Children.Add(buttons);
                 AddExperimentalRow(text, key);
                 continue;
             }

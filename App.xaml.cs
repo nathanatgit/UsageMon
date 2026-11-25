@@ -95,10 +95,10 @@ public partial class App : Application
     private void UpdateUsageDisplay()
     {
         if (_exiting) return;
-        _taskbar.UpdateUsage(_usage.Codex, _usage.Claude, _usage.DeepSeek, _usage.Kimi, _usage.Grok, _usage.Copilot);
+        _taskbar.UpdateUsage(_usage.Codex, _usage.Claude, _usage.DeepSeek, _usage.Kimi, _usage.Grok, _usage.Copilot, _usage.Gemini, _usage.Antigravity);
         var quotas = _usage.Quotas;
-        foreach (var panel in _panels) { panel.UpdateUsage(quotas); panel.UpdateBalances(_usage.DeepSeek, _usage.Kimi, _usage.Grok, _usage.Copilot); }
-        _settings?.UpdateUsage(_usage.Codex, _usage.Claude, _usage.Grok, _usage.Copilot, _usage.Kimi, _usage.DeepSeek);
+        foreach (var panel in _panels) { panel.UpdateUsage(quotas); panel.UpdateBalances(_usage.DeepSeek, _usage.Kimi, _usage.Grok, _usage.Copilot, _usage.Gemini, _usage.Antigravity); }
+        _settings?.UpdateUsage(_usage.Codex, _usage.Claude, _usage.Gemini, _usage.Antigravity, _usage.Grok, _usage.Copilot, _usage.Kimi, _usage.DeepSeek);
     }
 
     private void ApplyLanguage()

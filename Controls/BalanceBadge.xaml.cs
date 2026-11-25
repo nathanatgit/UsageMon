@@ -40,7 +40,10 @@ public sealed partial class BalanceBadge : UserControl
     }
     private static string WindowTitle(string name) => name switch
     {
-        "5h" => "5h", "weekly" => "Weekly", "premium" => "Premium requests", "chat" => "Chat", "completions" => "Completions", _ => "Used"
+        "5h" => "5h", "weekly" => "Weekly", "premium" => "Premium requests", "chat" => "Chat", "completions" => "Completions",
+        "pro" => "Pro", "flash" => "Flash", "flash-lite" => "Flash Lite",
+        "gemini-5h" => "Gemini 5h", "gemini-weekly" => "Gemini weekly", "gemini-argon" => "Gemini Argon weekly",
+        "3p-5h" => "Claude / GPT 5h", "3p-weekly" => "Claude / GPT weekly", _ => "Used"
     };
 
     public void Update(BalanceSnapshot snapshot)
